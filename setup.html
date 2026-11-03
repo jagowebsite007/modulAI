@@ -1,0 +1,105 @@
+function setupDatabase() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  const sheetsConfig = [
+    {
+      name: 'Users',
+      headers: ['ID', 'Nama', 'Email', 'Password', 'Paket', 'Status', 'ProgressJSON', 'TanggalDaftar'],
+      sample: [
+        ['USR-01', 'Budi Santoso (Basic)', 'basic@lms.com', '123456', 'BASIC', 'AKTIF', '["MOD-01"]', new Date().toISOString()],
+        ['USR-02', 'Siti Aminah (VIP)', 'vip@lms.com', '123456', 'VIP', 'AKTIF', '["MOD-01","MOD-02"]', new Date().toISOString()]
+      ]
+    },
+    {
+      name: 'Modules',
+      headers: ['ID', 'Kategori', 'Urutan', 'Judul', 'TipeAkses', 'VideoURL', 'Ringkasan', 'PromptText'],
+      sample: [
+        [
+          'MOD-01',
+          '1. Produk AI Digital',
+          1,
+          'Riset & Ide Produk Digital dengan AI',
+          'BASIC',
+          'https://www.youtube.com/embed/dQw4w9WgXcQ',
+          'Di modul ini kita membahas cara meriset pasar dan membuat e-book serta produk digital dalam 15 menit menggunakan Claude & ChatGPT.',
+          'Bertindaklah sebagai pakar produk digital. Berikan saya 10 ide produk digital di niche [MASUKKAN NICHE] lengkap dengan target pasar dan struktur materinya.'
+        ],
+        [
+          'MOD-02',
+          '2. Mastery Video AI',
+          2,
+          'Membuat Video Iklan Sinematik dengan AI',
+          'VIP',
+          'https://www.youtube.com/embed/dQw4w9WgXcQ',
+          'Panduan langkah demi langkah menghasilkan visual konsisten dan menganimasikannya menjadi video komersial berkualitas tinggi.',
+          'Cinematic commercial shot of a futuristic coffee machine on a sleek marble counter, morning sunlight, 8k resolution, photorealistic, slow camera pan --ar 16:9'
+        ],
+        [
+          'MOD-03',
+          '3. Pembuatan Website Instan',
+          3,
+          'Membuat Landing Page Konversi Tinggi',
+          'VIP',
+          'https://www.youtube.com/embed/dQw4w9WgXcQ',
+          'Cara menyusun struktur halaman penjualan produk AI menggunakan prompt generator web dan menghubungkannya ke WhatsApp.',
+          'Buatkan struktur copywriting dan desain landing page satu halaman untuk penjualan kelas AI, lengkap dengan Hero section, Benefit, dan tombol CTA ke WhatsApp.'
+        ]
+      ]
+    },
+    {
+      name: 'Tools',
+      headers: ['ID', 'NamaTool', 'Kategori', 'StatusHarga', 'Deskripsi', 'LinkURL'],
+      sample: [
+        ['TL-01', 'ChatGPT / Claude', 'Produk AI', 'Freemium', 'Asisten AI utama untuk merancang struktur produk, copywriting, dan ide bisnis.', 'https://chat.openai.com'],
+        ['TL-02', 'Runway Gen-3 / Kling AI', 'Video AI', 'Freemium', 'Generator teks dan gambar menjadi video sinematik realistis.', 'https://runwayml.com'],
+        ['TL-03', 'Vercel', 'Website', 'Gratis', 'Platform cloud hosting super cepat untuk deploy aplikasi web statis & dinamis.', 'https://vercel.com']
+      ]
+    },
+    {
+      name: 'Showcase',
+      headers: ['ID', 'NamaUser', 'JudulKarya', 'Kategori', 'LinkKarya', 'Tanggal'],
+      sample: [
+        ['SHW-01', 'Siti Aminah (VIP)', 'Landing Page Kelas Desain AI', 'Website', 'https://example.com', new Date().toISOString()]
+      ]
+    },
+    {
+      name: 'Settings',
+      headers: ['Key', 'Value'],
+      sample: [
+        ['ADMIN_PIN', '123456'],
+        ['APP_NAME', 'AIHub Academy'],
+        ['APP_TAGLINE', 'Produk AI • Video AI • Web App'],
+        ['ANNOUNCEMENT', '🔥 Update Materi Baru: Modul Pembuatan Website Instan & Prompt Video AI sudah tersedia!'],
+        ['UPGRADE_WA', '6281234567890'],
+        ['UPGRADE_TEXT', 'Halo Admin, saya member BASIC dan ingin upgrade ke akses VIP agar bisa membuka seluruh modul Video AI & Website.'],
+        ['MENU_BELAJAR', 'Ruang Belajar'],
+        ['MENU_TOOLS', 'Direktori AI Tools'],
+        ['MENU_SHOWCASE', 'Showcase Karya'],
+        ['MENU_SERTIFIKAT', 'Sertifikat'],
+        ['TOOLS_TITLE', 'Direktori AI & Web Tools'],
+        ['TOOLS_SUBTITLE', 'Daftar tools pilihan yang kita gunakan di dalam modul pembelajaran.'],
+        ['SHOWCASE_TITLE', 'Galeri Karya Peserta'],
+        ['SHOWCASE_SUBTITLE', 'Pamerkan hasil produk AI, video AI, atau website yang sudah Anda bangun!'],
+        ['CERT_HEADER', 'SERTIFIKAT KELULUSAN'],
+        ['CERT_DESC', 'Telah berhasil menyelesaikan seluruh kurikulum pembelajaran dan praktik pembuatan Produk AI, Video AI & Website Berbasis Web.'],
+        ['CERT_SIGNER', 'Tim Instruktur Utama'],
+        ['CERT_ROLE', 'Penyelenggara Program']
+      ]
+    }
+  ];
+
+  sheetsConfig.forEach(cfg => {
+    let sheet = ss.getSheetByName(cfg.name);
+    if (!sheet) {
+      sheet = ss.insertSheet(cfg.name);
+    } else {
+      sheet.clear();
+    }
+    sheet.appendRow(cfg.headers);
+    sheet.getRange(1, 1, 1, cfg.headers.length).setFontWeight('bold').setBackground('#e2e8f0');
+    cfg.sample.forEach(row => sheet.appendRow(row));
+    sheet.setFrozenRows(1);
+  });
+
+  Logger.log('Database LMS (Revisi) berhasil dibuat!');
+}

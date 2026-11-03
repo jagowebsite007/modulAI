@@ -1,0 +1,234 @@
+function doGet(e) {
+  const action = (e && e.parameter && e.parameter.action) ? e.parameter.action : 'init';
+  if (action === 'init') {
+    return jsonResponse({
+      status: 'success',
+      modules: getSheetObjects('Modules'),
+      tools: getSheetObjects('Tools'),
+      showcase: getSheetObjects('Showcase'),
+      settings: getSettingsObject()
+    });
+  }
+  return jsonResponse({ status: 'error', message: 'Action tidak dikenal' });
+}
+
+function doPost(e) {
+  try {
+    const body = JSON.parse(e.postData.contents);
+    const action = body.action;
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // 1. LOGIN PESERTA
+    if (action === 'login') {
+      const users = getSheetObjects('Users');
+      const user = users.find(u => 
+        String(u.Email).toLowerCase().trim() === String(body.email).toLowerCase().trim() && 
+        String(u.Password).trim() === String(body.password).trim()
+      );
+      if (!user) return jsonResponse({ status: 'error', message: 'Email atau password salah!' });
+      if (user.Status !== 'AKTIF') return jsonResponse({ status: 'error', message: 'Akun Anda sedang dinonaktifkan. Hubungi Admin.' });
+
+      delete user.Password;
+      return jsonResponse({
+        status: 'success',
+        user: user,
+        modules: getSheetObjects('Modules'),
+        tools: getSheetObjects('Tools'),
+        showcase: getSheetObjects('Showcase'),
+        settings: getSettingsObject()
+      });
+    }
+
+    // 2. SIMPAN PROGRES BELAJAR
+    if (action === 'toggleProgress') {
+      const sheet = ss.getSheetByName('Users');
+      const data = sheet.getDataRange().getValues();
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0] === body.userId) {
+          let prog = [];
+          try { prog = JSON.parse(data[i][6] || '[]'); } catch (err) { prog = []; }
+          const idx = prog.indexOf(body.moduleId);
+          if (idx > -1) {
+            prog.splice(idx, 1);
+          } else {
+            prog.push(body.moduleId);
+          }
+          const updatedJson = JSON.stringify(prog);
+          sheet.getRange(i + 1, 7).setValue(updatedJson);
+          return jsonResponse({ status: 'success', progress: prog });
+        }
+      }
+      return jsonResponse({ status: 'error', message: 'User tidak ditemukan' });
+    }
+
+    // 3. KIRIM KARYA SHOWCASE DARI PESERTA
+    if (action === 'submitShowcase') {
+      const sheet = ss.getSheetByName('Showcase');
+      const id = 'SHW-' + new Date().getTime().toString().slice(-5);
+      sheet.appendRow([id, body.namaUser, body.judulKarya, body.kategori, body.linkKarya, new Date().toISOString()]);
+      return jsonResponse({ status: 'success', showcase: getSheetObjects('Showcase') });
+    }
+
+    // 4. VERIFIKASI PIN ADMIN UNTUK SELURUH AKSI ADMIN DI BAWAH INI
+    const settings = getSettingsObject();
+    if (String(body.adminPin).trim() !== String(settings.ADMIN_PIN).trim()) {
+      return jsonResponse({ status: 'error', message: 'PIN Admin tidak valid!' });
+    }
+
+    if (action === 'adminGetData') {
+      return jsonResponse({
+        status: 'success',
+        users: getSheetObjects('Users'),
+        modules: getSheetObjects('Modules'),
+        tools: getSheetObjects('Tools'),
+        showcase: getSheetObjects('Showcase'),
+        settings: settings
+      });
+    }
+
+    // 5. CRUD MODUL RUANG BELAJAR (8 Kolom: Tanpa Code Vault & Tanpa Lampiran)
+    if (action === 'saveModule') {
+      const sheet = ss.getSheetByName('Modules');
+      const data = sheet.getDataRange().getValues();
+      const m = body.moduleData;
+      if (m.ID) {
+        for (let i = 1; i < data.length; i++) {
+          if (String(data[i][0]) === String(m.ID)) {
+            sheet.getRange(i + 1, 1, 1, 8).setValues([[m.ID, m.Kategori, Number(m.Urutan || 1), m.Judul, m.TipeAkses, m.VideoURL, m.Ringkasan, m.PromptText]]);
+            return jsonResponse({ status: 'success', modules: getSheetObjects('Modules') });
+          }
+        }
+      }
+      const newId = 'MOD-' + new Date().getTime().toString().slice(-5);
+      sheet.appendRow([newId, m.Kategori, Number(m.Urutan || 1), m.Judul, m.TipeAkses, m.VideoURL, m.Ringkasan, m.PromptText]);
+      return jsonResponse({ status: 'success', modules: getSheetObjects('Modules') });
+    }
+
+    if (action === 'deleteModule') {
+      deleteRowById(ss.getSheetByName('Modules'), body.id);
+      return jsonResponse({ status: 'success', modules: getSheetObjects('Modules') });
+    }
+
+    // 6. CRUD DIREKTORI AI TOOLS
+    if (action === 'saveTool') {
+      const sheet = ss.getSheetByName('Tools');
+      const data = sheet.getDataRange().getValues();
+      const t = body.toolData;
+      if (t.ID) {
+        for (let i = 1; i < data.length; i++) {
+          if (String(data[i][0]) === String(t.ID)) {
+            sheet.getRange(i + 1, 1, 1, 6).setValues([[t.ID, t.NamaTool, t.Kategori, t.StatusHarga, t.Deskripsi, t.LinkURL]]);
+            return jsonResponse({ status: 'success', tools: getSheetObjects('Tools') });
+          }
+        }
+      }
+      const newId = 'TL-' + new Date().getTime().toString().slice(-5);
+      sheet.appendRow([newId, t.NamaTool, t.Kategori, t.StatusHarga, t.Deskripsi, t.LinkURL]);
+      return jsonResponse({ status: 'success', tools: getSheetObjects('Tools') });
+    }
+
+    if (action === 'deleteTool') {
+      deleteRowById(ss.getSheetByName('Tools'), body.id);
+      return jsonResponse({ status: 'success', tools: getSheetObjects('Tools') });
+    }
+
+    // 7. CRUD SHOWCASE KARYA (ADMIN BISA TAMBAH, EDIT & HAPUS)
+    if (action === 'saveShowcase') {
+      const sheet = ss.getSheetByName('Showcase');
+      const data = sheet.getDataRange().getValues();
+      const s = body.showcaseData;
+      if (s.ID) {
+        for (let i = 1; i < data.length; i++) {
+          if (String(data[i][0]) === String(s.ID)) {
+            sheet.getRange(i + 1, 1, 1, 5).setValues([[s.ID, s.NamaUser, s.JudulKarya, s.Kategori, s.LinkKarya]]);
+            return jsonResponse({ status: 'success', showcase: getSheetObjects('Showcase') });
+          }
+        }
+      }
+      const newId = 'SHW-' + new Date().getTime().toString().slice(-5);
+      sheet.appendRow([newId, s.NamaUser, s.JudulKarya, s.Kategori, s.LinkKarya, new Date().toISOString()]);
+      return jsonResponse({ status: 'success', showcase: getSheetObjects('Showcase') });
+    }
+
+    if (action === 'deleteShowcase') {
+      deleteRowById(ss.getSheetByName('Showcase'), body.id);
+      return jsonResponse({ status: 'success', showcase: getSheetObjects('Showcase') });
+    }
+
+    // 8. CRUD MEMBER (BASIC / VIP)
+    if (action === 'saveUser') {
+      const sheet = ss.getSheetByName('Users');
+      const data = sheet.getDataRange().getValues();
+      const u = body.userData;
+      if (u.ID) {
+        for (let i = 1; i < data.length; i++) {
+          if (String(data[i][0]) === String(u.ID)) {
+            const pass = u.Password ? u.Password : data[i][3];
+            sheet.getRange(i + 1, 1, 1, 6).setValues([[u.ID, u.Nama, u.Email, pass, u.Paket, u.Status]]);
+            return jsonResponse({ status: 'success', users: getSheetObjects('Users') });
+          }
+        }
+      }
+      const newId = 'USR-' + new Date().getTime().toString().slice(-5);
+      sheet.appendRow([newId, u.Nama, u.Email, u.Password || '123456', u.Paket, u.Status || 'AKTIF', '[]', new Date().toISOString()]);
+      return jsonResponse({ status: 'success', users: getSheetObjects('Users') });
+    }
+
+    if (action === 'deleteUser') {
+      deleteRowById(ss.getSheetByName('Users'), body.id);
+      return jsonResponse({ status: 'success', users: getSheetObjects('Users') });
+    }
+
+    // 9. SIMPAN SEMUA PENGATURAN MENU, SERTIFIKAT & SISTEM
+    if (action === 'saveSettings') {
+      const sheet = ss.getSheetByName('Settings');
+      const current = getSettingsObject();
+      const incoming = body.settingsData || {};
+      const merged = Object.assign({}, current, incoming);
+
+      sheet.clearContents();
+      sheet.appendRow(['Key', 'Value']);
+      Object.keys(merged).forEach(k => sheet.appendRow([k, merged[k]]));
+      return jsonResponse({ status: 'success', settings: getSettingsObject() });
+    }
+
+    return jsonResponse({ status: 'error', message: 'Perintah tidak dikenali' });
+  } catch (err) {
+    return jsonResponse({ status: 'error', message: err.toString() });
+  }
+}
+
+function getSheetObjects(sheetName) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) return [];
+  const rows = sheet.getDataRange().getValues();
+  if (rows.length < 2) return [];
+  const headers = rows[0];
+  return rows.slice(1).map(r => {
+    let obj = {};
+    headers.forEach((h, i) => obj[h] = r[i]);
+    return obj;
+  });
+}
+
+function getSettingsObject() {
+  const arr = getSheetObjects('Settings');
+  let obj = {};
+  arr.forEach(item => obj[item.Key] = item.Value);
+  return obj;
+}
+
+function deleteRowById(sheet, id) {
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(id)) {
+      sheet.deleteRow(i + 1);
+      break;
+    }
+  }
+}
+
+function jsonResponse(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}

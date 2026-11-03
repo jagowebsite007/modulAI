@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AIHub Academy — Portal Pembelajaran AI & Website</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0b0f19; color: #f1f5f9; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    @media print {
+      body * { visibility: hidden; }
+      #certPrintArea, #certPrintArea * { visibility: visible; }
+      #certPrintArea { position: fixed; inset: 0; background: #0f172a; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- TOP NAVBAR -->
+  <header class="sticky top-0 z-30 bg-slate-900/90 backdrop-blur border-b border-slate-800 px-4 lg:px-8 h-16 flex items-center justify-between">
+    <div class="flex items-center gap-3 select-none cursor-pointer" onclick="handleLogoClick()" title="Klik 10x untuk membuka Panel Admin">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-extrabold text-white shadow-lg shadow-indigo-500/20">
+        AI
+      </div>
+      <div>
+        <h1 class="font-bold text-base lg:text-lg tracking-tight flex items-center gap-2">
+          <span id="uiAppName">AIHub Academy</span>
+          <span id="userTierBadge" class="hidden text-[11px] font-extrabold px-2.5 py-0.5 rounded-full"></span>
+        </h1>
+        <p id="uiAppTagline" class="text-[11px] text-slate-400">Produk AI • Video AI • Web App</p>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs Desktop -->
+    <nav id="mainNav" class="hidden md:flex items-center gap-1 bg-slate-800/70 p-1 rounded-xl border border-slate-700/60">
+      <button onclick="switchMainView('belajar')" id="nav-belajar" class="nav-btn px-4 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white">Ruang Belajar</button>
+      <button onclick="switchMainView('tools')" id="nav-tools" class="nav-btn px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white">Direktori AI Tools</button>
+      <button onclick="switchMainView('showcase')" id="nav-showcase" class="nav-btn px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white">Showcase Karya</button>
+      <button onclick="switchMainView('sertifikat')" id="nav-sertifikat" class="nav-btn px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white">Sertifikat</button>
+    </nav>
+
+    <div id="userHeaderRight" class="hidden flex items-center gap-3">
+      <div class="hidden sm:block text-right">
+        <p id="headerUserName" class="text-xs font-semibold text-slate-200"></p>
+        <p id="headerProgressText" class="text-[11px] text-indigo-400 font-medium">Progres: 0%</p>
+      </div>
+      <button id="btnHeaderUpgrade" onclick="openUpgradeModal()" class="hidden px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold text-xs shadow">
+        ⚡ Upgrade VIP
+      </button>
+      <button onclick="logout()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-red-500/20 hover:text-red-400 text-slate-300 text-xs font-medium border border-slate-700">
+        Keluar
+      </button>
+    </div>
+  </header>
+
+  <!-- MOBILE BOTTOM NAV -->
+  <div id="mobileNav" class="hidden md:hidden fixed bottom-0 inset-x-0 z-30 bg-slate-900 border-t border-slate-800 grid grid-cols-4 py-2 text-center text-[11px]">
+    <button onclick="switchMainView('belajar')" id="mnav-belajar" class="text-indigo-400 font-semibold py-1">Ruang Belajar</button>
+    <button onclick="switchMainView('tools')" id="mnav-tools" class="text-slate-400 py-1">Direktori AI Tools</button>
+    <button onclick="switchMainView('showcase')" id="mnav-showcase" class="text-slate-400 py-1">Showcase Karya</button>
+    <button onclick="switchMainView('sertifikat')" id="mnav-sertifikat" class="text-slate-400 py-1">Sertifikat</button>
+  </div>
+
+  <!-- ANNOUNCEMENT BANNER -->
+  <div id="announcementBar" class="hidden bg-indigo-950/80 border-b border-indigo-800/60 px-4 py-2 text-center text-xs text-indigo-200"></div>
+
+  <!-- ================= LOGIN VIEW ================= -->
+  <section id="loginView" class="flex-1 flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl">
+      <div class="text-center mb-6">
+        <span class="inline-block px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 text-xs font-semibold border border-indigo-500/20 mb-2">
+          PORTAL MEMBER LMS
+        </span>
+        <h2 class="text-2xl font-extrabold text-white">Masuk ke Ruang Belajar</h2>
+        <p class="text-xs text-slate-400 mt-1">Akses kurikulum Produk AI, Video AI & Pembuatan Website</p>
+      </div>
+
+      <form onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Email Terdaftar</label>
+          <input type="email" id="loginEmail" required placeholder="nama@email.com"
+            class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm focus:outline-none focus:border-indigo-500" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Password / Kode Akses</label>
+          <input type="password" id="loginPassword" required placeholder="••••••••"
+            class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm focus:outline-none focus:border-indigo-500" />
+        </div>
+        <button type="submit" id="btnLoginSubmit"
+          class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-bold text-sm text-white shadow-lg shadow-indigo-600/30 transition">
+          Masuk Sekarang
+        </button>
+      </form>
+
+      <div class="mt-6 pt-5 border-t border-slate-800 text-xs text-slate-400 space-y-1">
+        <p class="font-semibold text-slate-300">Akun Demo (Klik untuk isi otomatis):</p>
+        <div class="flex gap-2 pt-1">
+          <button onclick="fillDemo('basic@lms.com','123456')" class="flex-1 py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">
+            Demo BASIC
+          </button>
+          <button onclick="fillDemo('vip@lms.com','123456')" class="flex-1 py-1.5 px-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30">
+            Demo VIP 👑
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= MAIN APP VIEW ================= -->
+  <main id="appView" class="hidden flex-1 flex flex-col pb-16 md:pb-0">
+
+    <!-- 1. TAB RUANG BELAJAR (Hanya Video, Ringkasan, dan Prompt AI) -->
+    <div id="view-belajar" class="flex-1 grid grid-cols-1 lg:grid-cols-12">
+      <!-- Sidebar Kurikulum -->
+      <aside class="lg:col-span-4 xl:col-span-3 bg-slate-900/70 border-r border-slate-800 p-4 flex flex-col max-h-[calc(100vh-4rem)] overflow-y-auto">
+        <div class="mb-4 bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+          <div class="flex justify-between text-xs mb-1.5">
+            <span class="text-slate-400 font-medium">Progres Belajar Anda</span>
+            <span id="sidebarProgressPct" class="font-bold text-indigo-400">0%</span>
+          </div>
+          <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+            <div id="sidebarProgressBar" class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 w-0 transition-all duration-300"></div>
+          </div>
+        </div>
+
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 px-1">Daftar Kurikulum</h3>
+        <div id="curriculumContainer" class="space-y-3"></div>
+      </aside>
+
+      <!-- Konten Video & Materi Pendukung -->
+      <section class="lg:col-span-8 xl:col-span-9 p-4 sm:p-6 lg:p-8 overflow-y-auto max-h-[calc(100vh-4rem)]">
+        <div id="activeModuleContainer" class="max-w-4xl mx-auto space-y-6">
+          <!-- Video Frame -->
+          <div class="aspect-video w-full rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 shadow-xl">
+            <iframe id="videoPlayer" class="w-full h-full" src="" allowfullscreen referrerpolicy="no-referrer"></iframe>
+          </div>
+
+          <!-- Judul & Tombol Selesai -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span id="activeModCategory" class="text-xs font-semibold text-indigo-400"></span>
+                <span id="activeModTierBadge" class="text-[10px] font-bold px-2 py-0.5 rounded"></span>
+              </div>
+              <h2 id="activeModTitle" class="text-xl sm:text-2xl font-bold text-white">Pilih modul di sebelah kiri</h2>
+            </div>
+
+            <button id="btnToggleComplete" onclick="toggleModuleComplete()"
+              class="px-4 py-2.5 rounded-xl font-bold text-xs border transition flex items-center gap-2 self-start sm:self-auto">
+              ✓ Tandai Selesai
+            </button>
+          </div>
+
+          <!-- Sub-Tabs Materi (HANYA Ringkasan & Prompt AI sesuai revisi) -->
+          <div>
+            <div class="flex flex-wrap gap-2 border-b border-slate-800 pb-3 mb-4">
+              <button onclick="switchModTab('ringkasan')" id="mtab-ringkasan" class="mod-tab px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white">
+                📝 Ringkasan Materi
+              </button>
+              <button onclick="switchModTab('prompt')" id="mtab-prompt" class="mod-tab px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300">
+                ✨ Prompt AI (1-Click Copy)
+              </button>
+            </div>
+
+            <!-- Isi Ringkasan -->
+            <div id="mpanel-ringkasan" class="bg-slate-900 border border-slate-800 rounded-xl p-5 text-sm text-slate-300 leading-relaxed whitespace-pre-line"></div>
+
+            <!-- Isi Prompt Library -->
+            <div id="mpanel-prompt" class="hidden bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-indigo-400">PROMPT SIAP PAKAI (BISA DIEDIT LANGSUNG)</span>
+                <button onclick="copyTextFromEl('activePromptBox', 'Prompt berhasil disalin!')" class="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold">
+                  📋 Salin Prompt
+                </button>
+              </div>
+              <textarea id="activePromptBox" rows="6" class="w-full p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-slate-200 focus:outline-none focus:border-indigo-500"></textarea>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- 2. TAB DIREKTORI AI TOOLS -->
+    <div id="view-tools" class="hidden max-w-6xl w-full mx-auto p-6 space-y-6">
+      <div>
+        <h2 id="uiToolsTitle" class="text-2xl font-extrabold">Direktori AI & Web Tools</h2>
+        <p id="uiToolsSubtitle" class="text-xs text-slate-400">Daftar tools pilihan yang kita gunakan di dalam modul pembelajaran.</p>
+      </div>
+      <div id="toolsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </div>
+
+    <!-- 3. TAB SHOWCASE KARYA -->
+    <div id="view-showcase" class="hidden max-w-6xl w-full mx-auto p-6 space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 p-5 rounded-2xl border border-slate-800">
+        <div>
+          <h2 id="uiShowcaseTitle" class="text-xl font-extrabold">Galeri Karya Peserta</h2>
+          <p id="uiShowcaseSubtitle" class="text-xs text-slate-400">Pamerkan hasil produk AI, video AI, atau website yang sudah Anda bangun!</p>
+        </div>
+        <form onsubmit="submitShowcaseItem(event)" class="flex flex-wrap gap-2">
+          <input type="text" id="shwJudul" required placeholder="Judul Karya / Web" class="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs" />
+          <select id="shwKategori" class="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs">
+            <option value="Produk AI">Produk AI</option>
+            <option value="Video AI">Video AI</option>
+            <option value="Website">Website</option>
+          </select>
+          <input type="url" id="shwLink" required placeholder="https://link-karya.com" class="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs" />
+          <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold">+ Kirim Karya</button>
+        </form>
+      </div>
+      <div id="showcaseGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </div>
+
+    <!-- 4. TAB SERTIFIKAT -->
+    <div id="view-sertifikat" class="hidden max-w-4xl w-full mx-auto p-6 space-y-6 text-center">
+      <div id="certLockedNotice" class="bg-slate-900 border border-slate-800 rounded-2xl p-8 space-y-3">
+        <div class="text-4xl">🔒</div>
+        <h3 class="text-lg font-bold">Sertifikat Belum Terbuka</h3>
+        <p class="text-xs text-slate-400 max-w-md mx-auto">
+          Selesaikan seluruh modul yang tersedia pada paket Anda hingga mencapai <strong>100%</strong> untuk membuka dan mencetak sertifikat kelulusan resmi.
+        </p>
+      </div>
+
+      <div id="certReadyWrapper" class="hidden space-y-4">
+        <button onclick="window.print()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg">
+          🖨 Cetak / Simpan PDF Sertifikat
+        </button>
+        <div id="certPrintArea" class="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 border-4 border-amber-400/70 rounded-2xl p-10 shadow-2xl text-center space-y-4">
+          <p id="uiCertHeader" class="text-xs font-bold tracking-[0.3em] text-amber-400 uppercase">SERTIFIKAT KELULUSAN</p>
+          <h2 id="uiCertAcademy" class="text-3xl font-extrabold text-white">AIHub Academy</h2>
+          <p class="text-xs text-slate-300">Diberikan dengan bangga kepada:</p>
+          <h3 id="certStudentName" class="text-2xl sm:text-3xl font-extrabold text-amber-300 underline decoration-amber-500/50 py-2"></h3>
+          <p id="uiCertDesc" class="text-xs text-slate-300 max-w-lg mx-auto leading-relaxed">
+            Telah berhasil menyelesaikan seluruh kurikulum pembelajaran dan praktik pembuatan Produk AI, Video AI & Website Berbasis Web.
+          </p>
+          <div class="pt-6 flex justify-around text-xs text-slate-400 border-t border-slate-800/80 max-w-md mx-auto">
+            <div>
+              <p id="uiCertSigner" class="font-bold text-slate-200">Tim Instruktur Utama</p>
+              <p id="uiCertRole">Penyelenggara Program</p>
+            </div>
+            <div>
+              <p id="certDate" class="font-bold text-slate-200"></p>
+              <p>Tanggal Kelulusan</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ================= MODAL LOCKED VIP UPGRADE ================= -->
+  <div id="upgradeModal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-amber-500/40 rounded-2xl max-w-md w-full p-6 text-center space-y-4 shadow-2xl">
+      <div class="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center justify-center text-2xl mx-auto">
+        👑
+      </div>
+      <span class="text-[11px] font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-amber-500/20 text-amber-300">
+        Materi Khusus Member VIP
+      </span>
+      <h3 class="text-xl font-extrabold text-white">Buka Akses Semua Modul VIP!</h3>
+      <p class="text-xs text-slate-300 leading-relaxed">
+        Akun Anda saat ini terdaftar pada paket <strong>BASIC</strong>. Upgrade ke paket <strong>VIP</strong> untuk membuka seluruh modul <strong>Mastery Video AI</strong> dan <strong>Pembuatan Website Instan</strong>.
+      </p>
+      <div class="flex gap-2 pt-2">
+        <button onclick="closeUpgradeModal()" class="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold">Nanti Saja</button>
+        <a id="waUpgradeLink" href="#" target="_blank" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 text-xs font-extrabold">
+          Hubungi Admin (WA)
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL PANEL ADMIN LENGKAP (10x KLIK LOGO) ================= -->
+  <div id="adminModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-6xl w-full max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+        <div>
+          <h3 class="font-extrabold text-base text-white">⚙️ Panel Admin LMS — Kelola Semua Menu & Member</h3>
+          <p class="text-[11px] text-slate-400">Edit isi Ruang Belajar, Direktori AI Tools, Showcase Karya, Sertifikat, Label Menu, dan Member.</p>
+        </div>
+        <button onclick="closeAdminModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white text-xs font-bold">✕ Tutup</button>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-6 text-xs">
+        <!-- Ringkasan Analitik -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+            <p class="text-slate-400">Total Member</p>
+            <p id="statTotalUsers" class="text-xl font-extrabold text-white mt-1">0</p>
+          </div>
+          <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+            <p class="text-slate-400">Member VIP</p>
+            <p id="statVipUsers" class="text-xl font-extrabold text-amber-400 mt-1">0</p>
+          </div>
+          <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+            <p class="text-slate-400">Total Modul</p>
+            <p id="statTotalMods" class="text-xl font-extrabold text-indigo-400 mt-1">0</p>
+          </div>
+          <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+            <p class="text-slate-400">Total AI Tools & Karya</p>
+            <p id="statTotalShowcase" class="text-xl font-extrabold text-emerald-400 mt-1">0</p>
+          </div>
+        </div>
+
+        <!-- Navigasi Sub-Tab Admin (Semua Menu Bisa Diedit) -->
+        <div class="flex flex-wrap gap-2 border-b border-slate-800 pb-3">
+          <button onclick="switchAdminTab('modules')" id="atab-modules" class="adm-tab px-3.5 py-2 rounded-xl bg-indigo-600 text-white font-bold">📚 1. Ruang Belajar</button>
+          <button onclick="switchAdminTab('tools')" id="atab-tools" class="adm-tab px-3.5 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold">🛠 2. Direktori AI Tools</button>
+          <button onclick="switchAdminTab('showcase')" id="atab-showcase" class="adm-tab px-3.5 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold">🚀 3. Showcase Karya</button>
+          <button onclick="switchAdminTab('sertifikat')" id="atab-sertifikat" class="adm-tab px-3.5 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold">🎓 4. Sertifikat & Menu</button>
+          <button onclick="switchAdminTab('users')" id="atab-users" class="adm-tab px-3.5 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold">👥 5. Member (Basic/VIP)</button>
+        </div>
+
+        <!-- TAB ADMIN 1: KELOLA RUANG BELAJAR (TANPA CODE & TANPA FILE LAMPIRAN) -->
+        <div id="adm-modules" class="space-y-4">
+          <form id="formAdmModule" onsubmit="adminSaveModule(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <input type="hidden" id="admModId" />
+            <input type="text" id="admModKategori" required placeholder="Kategori (mis: 1. Produk AI Digital)" class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+            <input type="text" id="admModJudul" required placeholder="Judul Materi Video" class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+            <div class="flex gap-2">
+              <input type="number" id="admModUrutan" required placeholder="Urutan" value="1" class="w-20 px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+              <select id="admModAkses" class="flex-1 px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 font-bold">
+                <option value="BASIC">Terbuka untuk BASIC & VIP</option>
+                <option value="VIP">Khusus Member VIP 🔒</option>
+              </select>
+            </div>
+            <input type="text" id="admModVideo" required placeholder="Link Video (YouTube / Embed Drive)" class="sm:col-span-3 px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+            <textarea id="admModRingkasan" rows="3" placeholder="Catatan / Ringkasan Materi" class="sm:col-span-3 px-3 py-2 rounded-lg bg-slate-900 border border-slate-800"></textarea>
+            <textarea id="admModPrompt" rows="3" placeholder="Isi Prompt AI (1-Click Copy)" class="sm:col-span-3 px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 font-mono"></textarea>
+            <div class="sm:col-span-3 flex gap-2">
+              <button type="submit" class="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold">💾 Simpan Modul Pembelajaran</button>
+              <button type="button" onclick="resetModuleForm()" class="px-4 py-2.5 rounded-lg bg-slate-800 text-slate-300 font-bold">Reset Form</button>
+            </div>
+          </form>
+          <div id="adminModulesList" class="space-y-2"></div>
+        </div>
+
+        <!-- TAB ADMIN 2: KELOLA DIREKTORI AI TOOLS -->
+        <div id="adm-tools" class="hidden space-y-4">
+          <form id="formAdmTool" onsubmit="adminSaveTool(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-2.5 bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <input type="hidden" id="admToolId" />
+            <input type="text" id="admToolNama" required placeholder="Nama AI Tool (mis: Midjourney)" class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+            <input type="text" id="admToolKategori" required placeholder="Kategori (Produk AI / Video AI / Web)" class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+            <select id="admToolHarga" class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800">
+              <option value="Gratis">Gratis</option>
+              <option value="Freemium">Freemium</option>
+              <option value="Berbayar">Berbayar</option>
+            </select>
+            <input type="url" id="admToolLink" required placeholder="https://link-tool.com" class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+            <textarea id="admToolDeskripsi" rows="2" required placeholder="Deskripsi singkat kegunaan tool..." class="sm:col-span-4 px-3 py-2 rounded-lg bg-slate-900 border border-slate-800"></textarea>
+            <div class="sm:col-span-4 flex gap-2">
+              <button type="submit" class="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold">💾 Simpan AI Tool</button>
+              <button type="button" onclick="resetToolForm()" class="px-4 py-2.5 rounded-lg bg-slate-800 text-slate-300 font-bold">Reset</button>
+            </div>
+          </form>
+          <div id="adminToolsList" class="space-y-2"></div>
+        </div>
+
+        <!-- TAB ADMIN 3: KELOLA SHOWCASE KARYA -->
+        <div id="adm-showcase" class="hidden space-y-4">
+          <form id="formAdmShowcase" onsubmit="adminSaveShowcase(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-2.5 bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <input type="hidden" id="admShwId" />
+            <input type="text" id="admShwNama" required placeholder="Nama Peserta Pembuat" class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+            <input type="text" id="admShwJudul" required placeholder="Judul Karya" class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+            <select id="admShwKategori" class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800">
+              <option value="Produk AI">Produk AI</option>
+              <option value="Video AI">Video AI</option>
+              <option value="Website">Website</option>
+            </select>
+            <input type="url" id="admShwLink" required placeholder="https://link-karya.com" class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+            <div class="sm:col-span-4 flex gap-2">
+              <button type="submit" class="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold">💾 Simpan Karya Showcase</button>
+              <button type="button" onclick="resetShowcaseForm()" class="px-4 py-2.5 rounded-lg bg-slate-800 text-slate-300 font-bold">Reset</button>
+            </div>
+          </form>
+          <div id="adminShowcaseList" class="space-y-2"></div>
+        </div>
+
+        <!-- TAB ADMIN 4: KELOLA SERTIFIKAT, NAMA MENU & PENGATURAN -->
+        <div id="adm-sertifikat" class="hidden space-y-5 bg-slate-950 p-5 rounded-xl border border-slate-800">
+          <div>
+            <h4 class="font-bold text-sm text-indigo-400 mb-3">A. Kustomisasi Nama Menu Navigasi & Header Halaman</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div>
+                <label class="block text-slate-400 mb-1">Nama Aplikasi / Akademi</label>
+                <input type="text" id="admSetAppName" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">Subjudul Aplikasi</label>
+                <input type="text" id="admSetAppTagline" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">Label Menu 1 (Ruang Belajar)</label>
+                <input type="text" id="admSetMenuBelajar" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">Label Menu 2 (Direktori AI Tools)</label>
+                <input type="text" id="admSetMenuTools" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">Label Menu 3 (Showcase Karya)</label>
+                <input type="text" id="admSetMenuShowcase" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">Label Menu 4 (Sertifikat)</label>
+                <input type="text" id="admSetMenuSertifikat" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">Judul Halaman AI Tools</label>
+                <input type="text" id="admSetToolsTitle" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">Judul Halaman Showcase</label>
+                <input type="text" id="admSetShowcaseTitle" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-800">
+            <h4 class="font-bold text-sm text-amber-400 mb-3">B. Kustomisasi Teks Sertifikat Kelulusan</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-slate-400 mb-1">Judul Atas Sertifikat</label>
+                <input type="text" id="admSetCertHeader" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">Nama Penandatangan / Instruktur</label>
+                <input type="text" id="admSetCertSigner" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">Jabatan Penandatangan</label>
+                <input type="text" id="admSetCertRole" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+              </div>
+              <div class="sm:col-span-3">
+                <label class="block text-slate-400 mb-1">Kalimat Keterangan Kelulusan Sertifikat</label>
+                <textarea id="admSetCertDesc" rows="2" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-800">
+            <h4 class="font-bold text-sm text-emerald-400 mb-3">C. Pengumuman, WhatsApp Upgrade & PIN Admin</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div class="sm:col-span-3">
+                <label class="block text-slate-400 mb-1">Teks Banner Pengumuman Atas</label>
+                <input type="text" id="admSetAnnouncement" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">Nomor WA Admin Upgrade (Awali 62)</label>
+                <input type="text" id="admSetWa" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">Pesan Otomatis WA Upgrade</label>
+                <input type="text" id="admSetWaText" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">PIN Rahasia Admin</label>
+                <input type="text" id="admSetPin" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+              </div>
+            </div>
+          </div>
+
+          <button onclick="adminSaveSettings()" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-lg">
+            💾 Simpan Semua Pengaturan Menu & Sertifikat
+          </button>
+        </div>
+
+        <!-- TAB ADMIN 5: KELOLA MEMBER (BASIC / VIP) -->
+        <div id="adm-users" class="hidden space-y-4">
+          <form id="formAdmUser" onsubmit="adminSaveUser(event)" class="grid grid-cols-1 sm:grid-cols-6 gap-2 bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <input type="hidden" id="admUserId" />
+            <input type="text" id="admUserNama" required placeholder="Nama Lengkap" class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+            <input type="email" id="admUserEmail" required placeholder="Email Login" class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+            <input type="text" id="admUserPass" placeholder="Password (kosong=tetap)" class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
+            <select id="admUserPaket" class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 font-bold text-amber-300">
+              <option value="BASIC">Paket BASIC</option>
+              <option value="VIP">Paket VIP 👑</option>
+            </select>
+            <select id="admUserStatus" class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800">
+              <option value="AKTIF">AKTIF</option>
+              <option value="NONAKTIF">NONAKTIF</option>
+            </select>
+            <button type="submit" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold">Simpan Member</button>
+          </form>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-800 text-slate-400">
+                  <th class="py-2">Nama</th>
+                  <th class="py-2">Email</th>
+                  <th class="py-2">Paket</th>
+                  <th class="py-2">Status</th>
+                  <th class="py-2 text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="adminUsersTable" class="divide-y divide-slate-800/60"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="hidden fixed bottom-5 right-5 z-50 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold shadow-xl"></div>
+
+  <script>
+    // =========================================================================
+    // TEMPEL URL WEB APP GOOGLE APPS SCRIPT ANDA DI BAWAH INI:
+    // =========================================================================
+    const GAS_URL = 'PASTE_URL_WEB_APP_GOOGLE_APPS_SCRIPT_ANDA_DI_SINI';
+
+    let state = {
+      user: null,
+      modules: [],
+      tools: [],
+      showcase: [],
+      settings: {},
+      activeModule: null,
+      adminPin: '',
+      adminUsers: []
+    };
+
+    // --- FITUR 10x KLIK LOGO UNTUK BUKA ADMIN ---
+    let logoClicks = 0;
+    let logoTimer = null;
+    function handleLogoClick() {
+      logoClicks++;
+      clearTimeout(logoTimer);
+      logoTimer = setTimeout(() => { logoClicks = 0; }, 2000);
+      if (logoClicks >= 10) {
+        logoClicks = 0;
+        const pin = prompt('Masukkan PIN Admin (Default: 123456):');
+        if (pin) openAdminPanel(pin);
+      }
+    }
+
+    function fillDemo(email, pass) {
+      document.getElementById('loginEmail').value = email;
+      document.getElementById('loginPassword').value = pass;
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.remove('hidden');
+      setTimeout(() => t.classList.add('hidden'), 2600);
+    }
+
+    async function apiPost(payload) {
+      const res = await fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      return await res.json();
+    }
+
+    // --- LOGIN & SESSION ---
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const btn = document.getElementById('btnLoginSubmit');
+      btn.textContent = 'Memverifikasi...';
+      btn.disabled = true;
+
+      try {
+        const res = await apiPost({ action: 'login', email, password });
+        if (res.status !== 'success') {
+          alert(res.message || 'Gagal masuk');
+        } else {
+          state.user = res.user;
+          state.modules = res.modules || [];
+          state.tools = res.tools || [];
+          state.showcase = res.showcase || [];
+          state.settings = res.settings || {};
+          localStorage.setItem('lms_session', JSON.stringify(state));
+          initAppUI();
+        }
+      } catch (err) {
+        alert('Pastikan variabel GAS_URL di dalam index.html sudah diisi dengan URL Web App Google Apps Script Anda.');
+      } finally {
+        btn.textContent = 'Masuk Sekarang';
+        btn.disabled = false;
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('lms_session');
+      location.reload();
+    }
+
+    function applyDynamicSettingsUI() {
+      const s = state.settings || {};
+      document.getElementById('uiAppName').textContent = s.APP_NAME || 'AIHub Academy';
+      document.getElementById('uiAppTagline').textContent = s.APP_TAGLINE || 'Produk AI • Video AI • Web App';
+
+      // Label Menu Desktop & Mobile
+      const mBelajar = s.MENU_BELAJAR || 'Ruang Belajar';
+      const mTools = s.MENU_TOOLS || 'Direktori AI Tools';
+      const mShowcase = s.MENU_SHOWCASE || 'Showcase Karya';
+      const mSertifikat = s.MENU_SERTIFIKAT || 'Sertifikat';
+
+      document.getElementById('nav-belajar').textContent = mBelajar;
+      document.getElementById('nav-tools').textContent = mTools;
+      document.getElementById('nav-showcase').textContent = mShowcase;
+      document.getElementById('nav-sertifikat').textContent = mSertifikat;
+
+      document.getElementById('mnav-belajar').textContent = mBelajar;
+      document.getElementById('mnav-tools').textContent = mTools;
+      document.getElementById('mnav-showcase').textContent = mShowcase;
+      document.getElementById('mnav-sertifikat').textContent = mSertifikat;
+
+      // Judul Halaman
+      document.getElementById('uiToolsTitle').textContent = s.TOOLS_TITLE || 'Direktori AI & Web Tools';
+      document.getElementById('uiToolsSubtitle').textContent = s.TOOLS_SUBTITLE || 'Daftar tools pilihan yang kita gunakan di dalam modul pembelajaran.';
+      document.getElementById('uiShowcaseTitle').textContent = s.SHOWCASE_TITLE || 'Galeri Karya Peserta';
+      document.getElementById('uiShowcaseSubtitle').textContent = s.SHOWCASE_SUBTITLE || 'Pamerkan hasil produk AI, video AI, atau website yang sudah Anda bangun!';
+
+      // Teks Sertifikat
+      document.getElementById('uiCertHeader').textContent = s.CERT_HEADER || 'SERTIFIKAT KELULUSAN';
+      document.getElementById('uiCertAcademy').textContent = s.APP_NAME || 'AIHub Academy';
+      document.getElementById('uiCertDesc').textContent = s.CERT_DESC || 'Telah berhasil menyelesaikan seluruh kurikulum pembelajaran dan praktik pembuatan Produk AI, Video AI & Website Berbasis Web.';
+      document.getElementById('uiCertSigner').textContent = s.CERT_SIGNER || 'Tim Instruktur Utama';
+      document.getElementById('uiCertRole').textContent = s.CERT_ROLE || 'Penyelenggara Program';
+
+      // Banner Pengumuman
+      const bar = document.getElementById('announcementBar');
+      if (s.ANNOUNCEMENT) {
+        bar.textContent = s.ANNOUNCEMENT;
+        bar.classList.remove('hidden');
+      } else {
+        bar.classList.add('hidden');
+      }
+
+      // Link WA Upgrade
+      const waNum = s.UPGRADE_WA || '6281234567890';
+      const waText = encodeURIComponent(s.UPGRADE_TEXT || 'Halo Admin, saya ingin upgrade ke VIP.');
+      document.getElementById('waUpgradeLink').href = `https://wa.me/${waNum}?text=${waText}`;
+    }
+
+    function initAppUI() {
+      document.getElementById('loginView').classList.add('hidden');
+      document.getElementById('appView').classList.remove('hidden');
+      document.getElementById('mainNav').classList.remove('hidden');
+      document.getElementById('mobileNav').classList.remove('hidden');
+      document.getElementById('userHeaderRight').classList.remove('hidden');
+
+      document.getElementById('headerUserName').textContent = state.user.Nama;
+
+      const badge = document.getElementById('userTierBadge');
+      badge.classList.remove('hidden');
+      if (state.user.Paket === 'VIP') {
+        badge.textContent = '👑 MEMBER VIP';
+        badge.className = 'text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40';
+        document.getElementById('btnHeaderUpgrade').classList.add('hidden');
+      } else {
+        badge.textContent = 'MEMBER BASIC';
+        badge.className = 'text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700';
+        document.getElementById('btnHeaderUpgrade').classList.remove('hidden');
+      }
+
+      applyDynamicSettingsUI();
+      renderCurriculum();
+      renderTools();
+      renderShowcase();
+      updateProgressUI();
+
+      const firstMod = state.modules[0];
+      if (firstMod) selectModule(firstMod.ID);
+    }
+
+    // --- KURIKULUM & PEMBATASAN AKSES BASIC vs VIP ---
+    function canAccessModule(mod) {
+      if (state.user.Paket === 'VIP') return true;
+      return String(mod.TipeAkses).toUpperCase() === 'BASIC';
+    }
+
+    function getUserProgressArray() {
+      try { return JSON.parse(state.user.ProgressJSON || '[]'); } catch (e) { return []; }
+    }
+
+    function renderCurriculum() {
+      const container = document.getElementById('curriculumContainer');
+      container.innerHTML = '';
+      const prog = getUserProgressArray();
+
+      const grouped = {};
+      state.modules.sort((a, b) => Number(a.Urutan) - Number(b.Urutan)).forEach(m => {
+        if (!grouped[m.Kategori]) grouped[m.Kategori] = [];
+        grouped[m.Kategori].push(m);
+      });
+
+      Object.keys(grouped).forEach(kat => {
+        const box = document.createElement('div');
+        box.className = 'bg-slate-950/80 border border-slate-800/90 rounded-xl overflow-hidden';
+
+        let itemsHtml = '';
+        grouped[kat].forEach(m => {
+          const unlocked = canAccessModule(m);
+          const done = prog.includes(m.ID);
+          const isCurrent = state.activeModule && state.activeModule.ID === m.ID;
+
+          itemsHtml += `
+            <button onclick="selectModule('${m.ID}')"
+              class="w-full text-left px-3.5 py-2.5 flex items-center justify-between gap-2 text-xs transition border-t border-slate-900 ${isCurrent ? 'bg-indigo-600/20 text-white font-bold' : 'text-slate-300 hover:bg-slate-900'}">
+              <div class="flex items-center gap-2.5 truncate">
+                <span>${!unlocked ? '🔒' : (done ? '✅' : '▶️')}</span>
+                <span class="truncate">${m.Judul}</span>
+              </div>
+              <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded ${m.TipeAkses === 'VIP' ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-800 text-slate-400'}">
+                ${m.TipeAkses}
+              </span>
+            </button>
+          `;
+        });
+
+        box.innerHTML = `
+          <div class="px-3.5 py-2 bg-slate-900 text-[11px] font-extrabold text-slate-300 uppercase tracking-wider">
+            ${kat}
+          </div>
+          <div>${itemsHtml}</div>
+        `;
+        container.appendChild(box);
+      });
+    }
+
+    function selectModule(modId) {
+      const mod = state.modules.find(m => m.ID === modId);
+      if (!mod) return;
+
+      if (!canAccessModule(mod)) {
+        openUpgradeModal();
+        return;
+      }
+
+      state.activeModule = mod;
+      renderCurriculum();
+
+      document.getElementById('videoPlayer').src = formatVideoEmbed(mod.VideoURL);
+      document.getElementById('activeModCategory').textContent = mod.Kategori;
+      document.getElementById('activeModTitle').textContent = mod.Judul;
+
+      const tBadge = document.getElementById('activeModTierBadge');
+      tBadge.textContent = mod.TipeAkses;
+      tBadge.className = mod.TipeAkses === 'VIP'
+        ? 'text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300'
+        : 'text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300';
+
+      document.getElementById('mpanel-ringkasan').textContent = mod.Ringkasan || 'Tidak ada catatan tambahan.';
+      document.getElementById('activePromptBox').value = mod.PromptText || 'Tidak ada prompt khusus pada modul ini.';
+
+      updateCompleteButtonUI();
+    }
+
+    function formatVideoEmbed(url) {
+      if (!url) return '';
+      if (url.includes('youtube.com/watch?v=')) {
+        const id = url.split('v=')[1].split('&')[0];
+        return `https://www.youtube.com/embed/${id}`;
+      }
+      if (url.includes('youtu.be/')) {
+        const id = url.split('youtu.be/')[1].split('?')[0];
+        return `https://www.youtube.com/embed/${id}`;
+      }
+      return url;
+    }
+
+    async function toggleModuleComplete() {
+      if (!state.activeModule) return;
+      const res = await apiPost({
+        action: 'toggleProgress',
+        userId: state.user.ID,
+        moduleId: state.activeModule.ID
+      });
+      if (res.status === 'success') {
+        state.user.ProgressJSON = JSON.stringify(res.progress);
+        localStorage.setItem('lms_session', JSON.stringify(state));
+        renderCurriculum();
+        updateProgressUI();
+        updateCompleteButtonUI();
+        showToast('Progres belajar diperbarui!');
+      }
+    }
+
+    function updateCompleteButtonUI() {
+      const prog = getUserProgressArray();
+      const done = state.activeModule && prog.includes(state.activeModule.ID);
+      const btn = document.getElementById('btnToggleComplete');
+      if (done) {
+        btn.textContent = '✅ Selesai Dipelajari';
+        btn.className = 'px-4 py-2.5 rounded-xl font-bold text-xs bg-emerald-600/20 border border-emerald-500/40 text-emerald-300';
+      } else {
+        btn.textContent = '✓ Tandai Selesai';
+        btn.className = 'px-4 py-2.5 rounded-xl font-bold text-xs bg-slate-800 hover:bg-indigo-600 border border-slate-700 text-white';
+      }
+    }
+
+    function updateProgressUI() {
+      const accessibleMods = state.modules.filter(m => canAccessModule(m));
+      const prog = getUserProgressArray();
+      const doneCount = accessibleMods.filter(m => prog.includes(m.ID)).length;
+      const pct = accessibleMods.length ? Math.round((doneCount / accessibleMods.length) * 100) : 0;
+
+      document.getElementById('sidebarProgressPct').textContent = pct + '%';
+      document.getElementById('sidebarProgressBar').style.width = pct + '%';
+      document.getElementById('headerProgressText').textContent = `Progres: ${pct}%`;
+
+      if (pct >= 100 && accessibleMods.length > 0) {
+        document.getElementById('certLockedNotice').classList.add('hidden');
+        document.getElementById('certReadyWrapper').classList.remove('hidden');
+        document.getElementById('certStudentName').textContent = state.user.Nama;
+        document.getElementById('certDate').textContent = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+      } else {
+        document.getElementById('certLockedNotice').classList.remove('hidden');
+        document.getElementById('certReadyWrapper').classList.add('hidden');
+      }
+    }
+
+    // --- SUB-TABS RUANG BELAJAR (Hanya Ringkasan & Prompt) ---
+    function switchModTab(tab) {
+      ['ringkasan', 'prompt'].forEach(t => {
+        document.getElementById('mpanel-' + t).classList.toggle('hidden', t !== tab);
+        const btn = document.getElementById('mtab-' + t);
+        btn.className = t === tab
+          ? 'mod-tab px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white'
+          : 'mod-tab px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300';
+      });
+    }
+
+    function copyTextFromEl(elId, msg) {
+      const el = document.getElementById(elId);
+      navigator.clipboard.writeText(el.value);
+      showToast(msg);
+    }
+
+    function switchMainView(view) {
+      ['belajar', 'tools', 'showcase', 'sertifikat'].forEach(v => {
+        document.getElementById('view-' + v).classList.toggle('hidden', v !== view);
+        const navBtn = document.getElementById('nav-' + v);
+        if (navBtn) {
+          navBtn.className = v === view
+            ? 'nav-btn px-4 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white'
+            : 'nav-btn px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white';
+        }
+        const mBtn = document.getElementById('mnav-' + v);
+        if (mBtn) {
+          mBtn.className = v === view ? 'text-indigo-400 font-semibold py-1' : 'text-slate-400 py-1';
+        }
+      });
+    }
+
+    function renderTools() {
+      const grid = document.getElementById('toolsGrid');
+      grid.innerHTML = state.tools.map(t => `
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-center justify-between text-[11px] mb-2">
+              <span class="font-bold text-indigo-400">${t.Kategori}</span>
+              <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300">${t.StatusHarga}</span>
+            </div>
+            <h4 class="font-bold text-base text-white">${t.NamaTool}</h4>
+            <p class="text-xs text-slate-400 mt-1">${t.Deskripsi}</p>
+          </div>
+          <a href="${t.LinkURL}" target="_blank" class="block text-center py-2 rounded-xl bg-slate-800 hover:bg-indigo-600 text-xs font-bold transition">
+            Buka Website Tool ↗
+          </a>
+        </div>
+      `).join('');
+    }
+
+    function renderShowcase() {
+      const grid = document.getElementById('showcaseGrid');
+      grid.innerHTML = state.showcase.map(s => `
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between space-y-3">
+          <div>
+            <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">${s.Kategori}</span>
+            <h4 class="font-bold text-base text-white mt-2">${s.JudulKarya}</h4>
+            <p class="text-xs text-slate-400">Oleh: ${s.NamaUser}</p>
+          </div>
+          <a href="${s.LinkKarya}" target="_blank" class="block text-center py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white text-xs font-bold transition">
+            Lihat Karya Peserta ↗
+          </a>
+        </div>
+      `).join('');
+    }
+
+    async function submitShowcaseItem(e) {
+      e.preventDefault();
+      const res = await apiPost({
+        action: 'submitShowcase',
+        namaUser: state.user.Nama,
+        judulKarya: document.getElementById('shwJudul').value,
+        kategori: document.getElementById('shwKategori').value,
+        linkKarya: document.getElementById('shwLink').value
+      });
+      if (res.status === 'success') {
+        state.showcase = res.showcase;
+        localStorage.setItem('lms_session', JSON.stringify(state));
+        renderShowcase();
+        e.target.reset();
+        showToast('Karya berhasil ditambahkan ke Galeri!');
+      }
+    }
+
+    function openUpgradeModal() { document.getElementById('upgradeModal').classList.remove('hidden'); }
+    function closeUpgradeModal() { document.getElementById('upgradeModal').classList.add('hidden'); }
+
+    // ================= LOGIKA PANEL ADMIN (KELOLA SEMUA MENU) =================
+    async function openAdminPanel(pin) {
+      const res = await apiPost({ action: 'adminGetData', adminPin: pin });
+      if (res.status !== 'success') {
+        alert(res.message);
+        return;
+      }
+      state.adminPin = pin;
+      state.adminUsers = res.users || [];
+      state.modules = res.modules || [];
+      state.tools = res.tools || [];
+      state.showcase = res.showcase || [];
+      state.settings = res.settings || {};
+
+      document.getElementById('adminModal').classList.remove('hidden');
+      renderAdminDashboard();
+    }
+
+    function closeAdminModal() { document.getElementById('adminModal').classList.add('hidden'); }
+
+    function switchAdminTab(tab) {
+      ['modules', 'tools', 'showcase', 'sertifikat', 'users'].forEach(t => {
+        document.getElementById('adm-' + t).classList.toggle('hidden', t !== tab);
+        const btn = document.getElementById('atab-' + t);
+        if (btn) {
+          btn.className = t === tab
+            ? 'adm-tab px-3.5 py-2 rounded-xl bg-indigo-600 text-white font-bold'
+            : 'adm-tab px-3.5 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold';
+        }
+      });
+    }
+
+    function renderAdminDashboard() {
+      document.getElementById('statTotalUsers').textContent = state.adminUsers.length;
+      document.getElementById('statVipUsers').textContent = state.adminUsers.filter(u => u.Paket === 'VIP').length;
+      document.getElementById('statTotalMods').textContent = state.modules.length;
+      document.getElementById('statTotalShowcase').textContent = `${state.tools.length} Tools / ${state.showcase.length} Karya`;
+
+      // 1. Render List Modul Ruang Belajar
+      document.getElementById('adminModulesList').innerHTML = state.modules.map(m => `
+        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between gap-2">
+          <div>
+            <span class="text-[10px] font-bold text-indigo-400">${m.Kategori} • Urutan #${m.Urutan}</span>
+            <p class="font-bold text-white">${m.Judul} <span class="ml-2 text-[10px] px-2 py-0.5 rounded bg-slate-800">${m.TipeAkses}</span></p>
+          </div>
+          <div class="flex gap-2 shrink-0">
+            <button onclick='editModule(${JSON.stringify(m).replace(/'/g, "&#39;")})' class="px-3 py-1 rounded bg-slate-800 text-indigo-300 font-semibold">Edit</button>
+            <button onclick="deleteModule('${m.ID}')" class="px-3 py-1 rounded bg-red-500/20 text-red-300 font-semibold">Hapus</button>
+          </div>
+        </div>
+      `).join('');
+
+      // 2. Render List Direktori AI Tools
+      document.getElementById('adminToolsList').innerHTML = state.tools.map(t => `
+        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between gap-2">
+          <div>
+            <span class="text-[10px] font-bold text-indigo-400">${t.Kategori} • ${t.StatusHarga}</span>
+            <p class="font-bold text-white">${t.NamaTool} <span class="text-slate-400 font-normal">— ${t.Deskripsi}</span></p>
+          </div>
+          <div class="flex gap-2 shrink-0">
+            <button onclick='editTool(${JSON.stringify(t).replace(/'/g, "&#39;")})' class="px-3 py-1 rounded bg-slate-800 text-indigo-300 font-semibold">Edit</button>
+            <button onclick="deleteTool('${t.ID}')" class="px-3 py-1 rounded bg-red-500/20 text-red-300 font-semibold">Hapus</button>
+          </div>
+        </div>
+      `).join('');
+
+      // 3. Render List Showcase Karya
+      document.getElementById('adminShowcaseList').innerHTML = state.showcase.map(s => `
+        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between gap-2">
+          <div>
+            <span class="text-[10px] font-bold text-emerald-400">${s.Kategori} • Oleh: ${s.NamaUser}</span>
+            <p class="font-bold text-white">${s.JudulKarya} <a href="${s.LinkKarya}" target="_blank" class="text-indigo-400 underline ml-2">Buka Link</a></p>
+          </div>
+          <div class="flex gap-2 shrink-0">
+            <button onclick='editShowcase(${JSON.stringify(s).replace(/'/g, "&#39;")})' class="px-3 py-1 rounded bg-slate-800 text-indigo-300 font-semibold">Edit</button>
+            <button onclick="deleteShowcase('${s.ID}')" class="px-3 py-1 rounded bg-red-500/20 text-red-300 font-semibold">Hapus</button>
+          </div>
+        </div>
+      `).join('');
+
+      // 4. Isi Form Pengaturan Menu & Sertifikat
+      const s = state.settings || {};
+      document.getElementById('admSetAppName').value = s.APP_NAME || 'AIHub Academy';
+      document.getElementById('admSetAppTagline').value = s.APP_TAGLINE || 'Produk AI • Video AI • Web App';
+      document.getElementById('admSetMenuBelajar').value = s.MENU_BELAJAR || 'Ruang Belajar';
+      document.getElementById('admSetMenuTools').value = s.MENU_TOOLS || 'Direktori AI Tools';
+      document.getElementById('admSetMenuShowcase').value = s.MENU_SHOWCASE || 'Showcase Karya';
+      document.getElementById('admSetMenuSertifikat').value = s.MENU_SERTIFIKAT || 'Sertifikat';
+      document.getElementById('admSetToolsTitle').value = s.TOOLS_TITLE || 'Direktori AI & Web Tools';
+      document.getElementById('admSetShowcaseTitle').value = s.SHOWCASE_TITLE || 'Galeri Karya Peserta';
+      document.getElementById('admSetCertHeader').value = s.CERT_HEADER || 'SERTIFIKAT KELULUSAN';
+      document.getElementById('admSetCertSigner').value = s.CERT_SIGNER || 'Tim Instruktur Utama';
+      document.getElementById('admSetCertRole').value = s.CERT_ROLE || 'Penyelenggara Program';
+      document.getElementById('admSetCertDesc').value = s.CERT_DESC || '';
+      document.getElementById('admSetAnnouncement').value = s.ANNOUNCEMENT || '';
+      document.getElementById('admSetWa').value = s.UPGRADE_WA || '';
+      document.getElementById('admSetWaText').value = s.UPGRADE_TEXT || '';
+      document.getElementById('admSetPin').value = s.ADMIN_PIN || '123456';
+
+      // 5. Render Tabel Member
+      document.getElementById('adminUsersTable').innerHTML = state.adminUsers.map(u => `
+        <tr>
+          <td class="py-2 font-semibold">${u.Nama}</td>
+          <td class="py-2 text-slate-400">${u.Email}</td>
+          <td class="py-2"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${u.Paket === 'VIP' ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-800'}">${u.Paket}</span></td>
+          <td class="py-2">${u.Status}</td>
+          <td class="py-2 text-right space-x-2">
+            <button onclick='editUser(${JSON.stringify(u).replace(/'/g, "&#39;")})' class="text-indigo-400 hover:underline">Edit</button>
+            <button onclick="deleteUser('${u.ID}')" class="text-red-400 hover:underline">Hapus</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // --- CRUD MODUL ---
+    function editModule(m) {
+      document.getElementById('admModId').value = m.ID;
+      document.getElementById('admModKategori').value = m.Kategori;
+      document.getElementById('admModJudul').value = m.Judul;
+      document.getElementById('admModUrutan').value = m.Urutan;
+      document.getElementById('admModAkses').value = m.TipeAkses;
+      document.getElementById('admModVideo').value = m.VideoURL;
+      document.getElementById('admModRingkasan').value = m.Ringkasan;
+      document.getElementById('admModPrompt').value = m.PromptText;
+    }
+
+    function resetModuleForm() {
+      document.getElementById('formAdmModule').reset();
+      document.getElementById('admModId').value = '';
+    }
+
+    async function adminSaveModule(e) {
+      e.preventDefault();
+      const moduleData = {
+        ID: document.getElementById('admModId').value,
+        Kategori: document.getElementById('admModKategori').value,
+        Judul: document.getElementById('admModJudul').value,
+        Urutan: document.getElementById('admModUrutan').value,
+        TipeAkses: document.getElementById('admModAkses').value,
+        VideoURL: document.getElementById('admModVideo').value,
+        Ringkasan: document.getElementById('admModRingkasan').value,
+        PromptText: document.getElementById('admModPrompt').value
+      };
+      const res = await apiPost({ action: 'saveModule', adminPin: state.adminPin, moduleData });
+      if (res.status === 'success') {
+        state.modules = res.modules;
+        localStorage.setItem('lms_session', JSON.stringify(state));
+        resetModuleForm();
+        renderAdminDashboard();
+        if (state.user) renderCurriculum();
+        showToast('Modul berhasil disimpan!');
+      }
+    }
+
+    async function deleteModule(id) {
+      if (!confirm('Hapus modul ini?')) return;
+      const res = await apiPost({ action: 'deleteModule', adminPin: state.adminPin, id });
+      if (res.status === 'success') {
+        state.modules = res.modules;
+        localStorage.setItem('lms_session', JSON.stringify(state));
+        renderAdminDashboard();
+        if (state.user) renderCurriculum();
+      }
+    }
+
+    // --- CRUD DIREKTORI AI TOOLS ---
+    function editTool(t) {
+      document.getElementById('admToolId').value = t.ID;
+      document.getElementById('admToolNama').value = t.NamaTool;
+      document.getElementById('admToolKategori').value = t.Kategori;
+      document.getElementById('admToolHarga').value = t.StatusHarga;
+      document.getElementById('admToolLink').value = t.LinkURL;
+      document.getElementById('admToolDeskripsi').value = t.Deskripsi;
+    }
+
+    function resetToolForm() {
+      document.getElementById('formAdmTool').reset();
+      document.getElementById('admToolId').value = '';
+    }
+
+    async function adminSaveTool(e) {
+      e.preventDefault();
+      const toolData = {
+        ID: document.getElementById('admToolId').value,
+        NamaTool: document.getElementById('admToolNama').value,
+        Kategori: document.getElementById('admToolKategori').value,
+        StatusHarga: document.getElementById('admToolHarga').value,
+        LinkURL: document.getElementById('admToolLink').value,
+        Deskripsi: document.getElementById('admToolDeskripsi').value
+      };
+      const res = await apiPost({ action: 'saveTool', adminPin: state.adminPin, toolData });
+      if (res.status === 'success') {
+        state.tools = res.tools;
+        localStorage.setItem('lms_session', JSON.stringify(state));
+        resetToolForm();
+        renderAdminDashboard();
+        if (state.user) renderTools();
+        showToast('AI Tool berhasil disimpan!');
+      }
+    }
+
+    async function deleteTool(id) {
+      if (!confirm('Hapus AI Tool ini?')) return;
+      const res = await apiPost({ action: 'deleteTool', adminPin: state.adminPin, id });
+      if (res.status === 'success') {
+        state.tools = res.tools;
+        localStorage.setItem('lms_session', JSON.stringify(state));
+        renderAdminDashboard();
+        if (state.user) renderTools();
+      }
+    }
+
+    // --- CRUD SHOWCASE KARYA ---
+    function editShowcase(s) {
+      document.getElementById('admShwId').value = s.ID;
+      document.getElementById('admShwNama').value = s.NamaUser;
+      document.getElementById('admShwJudul').value = s.JudulKarya;
+      document.getElementById('admShwKategori').value = s.Kategori;
+      document.getElementById('admShwLink').value = s.LinkKarya;
+    }
+
+    function resetShowcaseForm() {
+      document.getElementById('formAdmShowcase').reset();
+      document.getElementById('admShwId').value = '';
+    }
+
+    async function adminSaveShowcase(e) {
+      e.preventDefault();
+      const showcaseData = {
+        ID: document.getElementById('admShwId').value,
+        NamaUser: document.getElementById('admShwNama').value,
+        JudulKarya: document.getElementById('admShwJudul').value,
+        Kategori: document.getElementById('admShwKategori').value,
+        LinkKarya: document.getElementById('admShwLink').value
+      };
+      const res = await apiPost({ action: 'saveShowcase', adminPin: state.adminPin, showcaseData });
+      if (res.status === 'success') {
+        state.showcase = res.showcase;
+        localStorage.setItem('lms_session', JSON.stringify(state));
+        resetShowcaseForm();
+        renderAdminDashboard();
+        if (state.user) renderShowcase();
+        showToast('Karya Showcase berhasil disimpan!');
+      }
+    }
+
+    async function deleteShowcase(id) {
+      if (!confirm('Hapus karya showcase ini?')) return;
+      const res = await apiPost({ action: 'deleteShowcase', adminPin: state.adminPin, id });
+      if (res.status === 'success') {
+        state.showcase = res.showcase;
+        localStorage.setItem('lms_session', JSON.stringify(state));
+        renderAdminDashboard();
+        if (state.user) renderShowcase();
+      }
+    }
+
+    // --- CRUD PENGATURAN SEMUA MENU & SERTIFIKAT ---
+    async function adminSaveSettings() {
+      const settingsData = {
+        APP_NAME: document.getElementById('admSetAppName').value,
+        APP_TAGLINE: document.getElementById('admSetAppTagline').value,
+        MENU_BELAJAR: document.getElementById('admSetMenuBelajar').value,
+        MENU_TOOLS: document.getElementById('admSetMenuTools').value,
+        MENU_SHOWCASE: document.getElementById('admSetMenuShowcase').value,
+        MENU_SERTIFIKAT: document.getElementById('admSetMenuSertifikat').value,
+        TOOLS_TITLE: document.getElementById('admSetToolsTitle').value,
+        SHOWCASE_TITLE: document.getElementById('admSetShowcaseTitle').value,
+        CERT_HEADER: document.getElementById('admSetCertHeader').value,
+        CERT_SIGNER: document.getElementById('admSetCertSigner').value,
+        CERT_ROLE: document.getElementById('admSetCertRole').value,
+        CERT_DESC: document.getElementById('admSetCertDesc').value,
+        ANNOUNCEMENT: document.getElementById('admSetAnnouncement').value,
+        UPGRADE_WA: document.getElementById('admSetWa').value,
+        UPGRADE_TEXT: document.getElementById('admSetWaText').value,
+        ADMIN_PIN: document.getElementById('admSetPin').value
+      };
+      const res = await apiPost({ action: 'saveSettings', adminPin: state.adminPin, settingsData });
+      if (res.status === 'success') {
+        state.settings = res.settings;
+        state.adminPin = settingsData.ADMIN_PIN;
+        localStorage.setItem('lms_session', JSON.stringify(state));
+        if (state.user) applyDynamicSettingsUI();
+        showToast('Seluruh pengaturan menu & sertifikat berhasil disimpan!');
+      }
+    }
+
+    // --- CRUD MEMBER ---
+    function editUser(u) {
+      document.getElementById('admUserId').value = u.ID;
+      document.getElementById('admUserNama').value = u.Nama;
+      document.getElementById('admUserEmail').value = u.Email;
+      document.getElementById('admUserPaket').value = u.Paket;
+      document.getElementById('admUserStatus').value = u.Status;
+    }
+
+    async function adminSaveUser(e) {
+      e.preventDefault();
+      const userData = {
+        ID: document.getElementById('admUserId').value,
+        Nama: document.getElementById('admUserNama').value,
+        Email: document.getElementById('admUserEmail').value,
+        Password: document.getElementById('admUserPass').value,
+        Paket: document.getElementById('admUserPaket').value,
+        Status: document.getElementById('admUserStatus').value
+      };
+      const res = await apiPost({ action: 'saveUser', adminPin: state.adminPin, userData });
+      if (res.status === 'success') {
+        state.adminUsers = res.users;
+        e.target.reset();
+        document.getElementById('admUserId').value = '';
+        renderAdminDashboard();
+        showToast('Data member berhasil disimpan!');
+      }
+    }
+
+    async function deleteUser(id) {
+      if (!confirm('Hapus member ini?')) return;
+      const res = await apiPost({ action: 'deleteUser', adminPin: state.adminPin, id });
+      if (res.status === 'success') {
+        state.adminUsers = res.users;
+        renderAdminDashboard();
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const saved = localStorage.getItem('lms_session');
+      if (saved) {
+        try {
+          state = JSON.parse(saved);
+          if (state.user) initAppUI();
+        } catch (e) {}
+      }
+    });
+  </script>
+</body>
+</html>
