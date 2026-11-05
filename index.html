@@ -73,7 +73,7 @@
     <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl">
       <div class="text-center mb-6">
         <span class="inline-block px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 text-xs font-semibold border border-indigo-500/20 mb-2">
-          PORTAL MEMBER LMS
+          PORTAL MEMBER AI STUDY
         </span>
         <h2 class="text-2xl font-extrabold text-white">Masuk ke Ruang Belajar</h2>
         <p class="text-xs text-slate-400 mt-1">Akses kurikulum Produk AI, Video AI & Pembuatan Website</p>
@@ -95,18 +95,6 @@
           Masuk Sekarang
         </button>
       </form>
-
-      <div class="mt-6 pt-5 border-t border-slate-800 text-xs text-slate-400 space-y-1">
-        <p class="font-semibold text-slate-300">Akun Demo (Klik untuk isi otomatis):</p>
-        <div class="flex gap-2 pt-1">
-          <button onclick="fillDemo('basic@lms.com','123456')" class="flex-1 py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">
-            Demo BASIC
-          </button>
-          <button onclick="fillDemo('vip@lms.com','123456')" class="flex-1 py-1.5 px-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30">
-            Demo VIP 👑
-          </button>
-        </div>
-      </div>
     </div>
   </section>
 
@@ -274,18 +262,68 @@
     </div>
   </div>
 
-  <!-- ================= MODAL PANEL ADMIN LENGKAP (10x KLIK LOGO) ================= -->
-  <div id="adminModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-6xl w-full max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
-      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+  <!-- ================= MODAL LOGIN PIN ADMIN (DESAIN MENARIK) ================= -->
+  <div id="adminPinModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="relative bg-slate-900 border border-indigo-500/30 rounded-2xl w-full max-w-[340px] aspect-square p-5 shadow-2xl shadow-indigo-500/10 overflow-hidden flex flex-col justify-between">
+      <!-- Efek Cahaya Dekoratif -->
+      <div class=" -top-16 -right-16 w-36 h-36 bg-indigo-600/20 rounded-full blur-2xl pointer-events-none"></div>
+      <div class=" -bottom-16 -left-16 w-36 h-36 bg-purple-600/20 rounded-full blur-2xl pointer-events-none"></div>
+
+      <div class="relative text-center space-y-1.5">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-indigo-700 flex items-center justify-center text-xl mx-auto shadow-lg shadow-indigo-500/30 border border-white/10">
+          🔐
+        </div>
+        <span class="inline-block text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+          Security Gate • Admin Only
+        </span>
+        <h3 class="text-lg font-extrabold text-white">Akses Panel Admin</h3>
+        <p class="text-[11px] text-slate-400 leading-snug">
+          Masukkan kode PIN Otorisasi untuk membuka pusat kendali LMS.
+        </p>
+      </div>
+
+      <form onsubmit="submitAdminPinModal(event)" class="relative space-y-3">
         <div>
-          <h3 class="font-extrabold text-base text-white">⚙️ Panel Admin LMS — Kelola Semua Menu & Member</h3>
+          <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 text-center">
+            Kode PIN Rahasia
+          </label>
+          <div class="relative">
+            <input type="password" id="adminPinInput" required placeholder="••••••"
+              class="w-full px-3 py-2.5 rounded-xl bg-slate-950/90 border border-slate-700/80 text-center text-base font-extrabold tracking-[0.4em] text-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition" />
+            <button type="button" onclick="toggleAdminPinVisibility()" id="btnTogglePinEye"
+              class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-[11px] font-semibold px-2 py-1 rounded-lg bg-slate-800/80">
+              Lihat
+            </button>
+          </div>
+          <p id="adminPinError" class="hidden text-[10px] font-semibold text-red-400 text-center mt-1.5 bg-red-500/10 border border-red-500/20 py-1 px-2 rounded-lg"></p>
+        </div>
+
+        <div class="flex gap-2">
+          <button type="button" onclick="closeAdminPinModal()"
+            class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition">
+            Batal
+          </button>
+          <button type="submit" id="btnSubmitAdminPin"
+            class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-extrabold shadow-lg shadow-indigo-600/30 transition">
+            Buka Panel ➔
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL PANEL ADMIN LENGKAP (10x KLIK LOGO) ================= -->
+  <div id="adminModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-full sm:max-w-2xl md:max-w-4xl lg:max-w-5xl h-[92vh] sm:h-[88vh] max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-800 flex items-center justify-between gap-2">
+        <div>
+          <h3 class="font-extrabold text-sm sm:text-base text-white">⚙️ Panel AI Study — Kelola Semua Menu & Member</h3>
           <p class="text-[11px] text-slate-400">Edit isi Ruang Belajar, Direktori AI Tools, Showcase Karya, Sertifikat, Label Menu, dan Member.</p>
         </div>
         <button onclick="closeAdminModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white text-xs font-bold">✕ Tutup</button>
       </div>
 
-      <div class="p-6 overflow-y-auto space-y-6 text-xs">
+      <div class="p-4 sm:p-6 flex-1 overflow-y-auto space-y-6 text-xs">
         <!-- Ringkasan Analitik -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
@@ -512,9 +550,9 @@
 
   <script>
     // =========================================================================
-    // TEMPEL URL WEB APP GOOGLE APPS SCRIPT ANDA DI BAWAH INI:
+    // URL WEB APP GOOGLE APPS SCRIPT ANDA:
     // =========================================================================
-    const GAS_URL = 'PASTE_URL_WEB_APP_GOOGLE_APPS_SCRIPT_ANDA_DI_SINI';
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwuiXvfb5o2dJll2GKFqtfb1GT3mgKUbv2aPGYg-mQJVusaeE5g9WqJSu2XYRIk0o9B/exec';
 
     let state = {
       user: null,
@@ -536,9 +574,43 @@
       logoTimer = setTimeout(() => { logoClicks = 0; }, 2000);
       if (logoClicks >= 10) {
         logoClicks = 0;
-        const pin = prompt('Masukkan PIN Admin (Default: 123456):');
-        if (pin) openAdminPanel(pin);
+        openAdminPinModal();
       }
+    }
+
+    function openAdminPinModal() {
+      const modal = document.getElementById('adminPinModal');
+      const input = document.getElementById('adminPinInput');
+      const err = document.getElementById('adminPinError');
+      err.classList.add('hidden');
+      input.value = '';
+      input.type = 'password';
+      document.getElementById('btnTogglePinEye').textContent = 'Lihat';
+      modal.classList.remove('hidden');
+      setTimeout(() => input.focus(), 100);
+    }
+
+    function closeAdminPinModal() {
+      document.getElementById('adminPinModal').classList.add('hidden');
+    }
+
+    function toggleAdminPinVisibility() {
+      const input = document.getElementById('adminPinInput');
+      const btn = document.getElementById('btnTogglePinEye');
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = 'Sembunyi';
+      } else {
+        input.type = 'password';
+        btn.textContent = 'Lihat';
+      }
+    }
+
+    async function submitAdminPinModal(e) {
+      e.preventDefault();
+      const pin = document.getElementById('adminPinInput').value.trim();
+      if (!pin) return;
+      await openAdminPanel(pin);
     }
 
     function fillDemo(email, pass) {
@@ -574,7 +646,7 @@
       try {
         const res = await apiPost({ action: 'login', email, password });
         if (res.status !== 'success') {
-          alert(res.message || 'Gagal masuk');
+          showToast('❌ ' + (res.message || 'Gagal masuk'));
         } else {
           state.user = res.user;
           state.modules = res.modules || [];
@@ -585,7 +657,7 @@
           initAppUI();
         }
       } catch (err) {
-        alert('Pastikan variabel GAS_URL di dalam index.html sudah diisi dengan URL Web App Google Apps Script Anda.');
+        showToast('⚠️ Gagal terhubung ke server Google Apps Script.');
       } finally {
         btn.textContent = 'Masuk Sekarang';
         btn.disabled = false;
@@ -915,20 +987,47 @@
 
     // ================= LOGIKA PANEL ADMIN (KELOLA SEMUA MENU) =================
     async function openAdminPanel(pin) {
-      const res = await apiPost({ action: 'adminGetData', adminPin: pin });
-      if (res.status !== 'success') {
-        alert(res.message);
-        return;
+      const btn = document.getElementById('btnSubmitAdminPin');
+      const err = document.getElementById('adminPinError');
+      if (btn) {
+        btn.textContent = 'Memverifikasi...';
+        btn.disabled = true;
       }
-      state.adminPin = pin;
-      state.adminUsers = res.users || [];
-      state.modules = res.modules || [];
-      state.tools = res.tools || [];
-      state.showcase = res.showcase || [];
-      state.settings = res.settings || {};
+      if (err) err.classList.add('hidden');
 
-      document.getElementById('adminModal').classList.remove('hidden');
-      renderAdminDashboard();
+      try {
+        const res = await apiPost({ action: 'adminGetData', adminPin: pin });
+        if (res.status !== 'success') {
+          if (err) {
+            err.textContent = '❌ ' + (res.message || 'PIN Admin tidak valid!');
+            err.classList.remove('hidden');
+          } else {
+            showToast('❌ ' + (res.message || 'PIN Admin tidak valid!'));
+          }
+          return;
+        }
+        state.adminPin = pin;
+        state.adminUsers = res.users || [];
+        state.modules = res.modules || [];
+        state.tools = res.tools || [];
+        state.showcase = res.showcase || [];
+        state.settings = res.settings || {};
+
+        closeAdminPinModal();
+        document.getElementById('adminModal').classList.remove('hidden');
+        renderAdminDashboard();
+        showToast('🔓 Berhasil masuk ke Panel Admin');
+      } catch (e) {
+        if (err) {
+          err.textContent = '⚠️ Gagal terhubung ke server.';
+          err.classList.remove('hidden');
+        }
+      } finally {
+        if (btn) {
+          btn.textContent = 'Buka Panel ➔';
+          btn.disabled = false;
+        }
+      }
     }
 
     function closeAdminModal() { document.getElementById('adminModal').classList.add('hidden'); }
@@ -1068,13 +1167,13 @@
     }
 
     async function deleteModule(id) {
-      if (!confirm('Hapus modul ini?')) return;
       const res = await apiPost({ action: 'deleteModule', adminPin: state.adminPin, id });
       if (res.status === 'success') {
         state.modules = res.modules;
         localStorage.setItem('lms_session', JSON.stringify(state));
         renderAdminDashboard();
         if (state.user) renderCurriculum();
+        showToast('Modul berhasil dihapus');
       }
     }
 
@@ -1115,13 +1214,13 @@
     }
 
     async function deleteTool(id) {
-      if (!confirm('Hapus AI Tool ini?')) return;
       const res = await apiPost({ action: 'deleteTool', adminPin: state.adminPin, id });
       if (res.status === 'success') {
         state.tools = res.tools;
         localStorage.setItem('lms_session', JSON.stringify(state));
         renderAdminDashboard();
         if (state.user) renderTools();
+        showToast('AI Tool berhasil dihapus');
       }
     }
 
@@ -1160,13 +1259,13 @@
     }
 
     async function deleteShowcase(id) {
-      if (!confirm('Hapus karya showcase ini?')) return;
       const res = await apiPost({ action: 'deleteShowcase', adminPin: state.adminPin, id });
       if (res.status === 'success') {
         state.showcase = res.showcase;
         localStorage.setItem('lms_session', JSON.stringify(state));
         renderAdminDashboard();
         if (state.user) renderShowcase();
+        showToast('Karya showcase berhasil dihapus');
       }
     }
 
@@ -1230,11 +1329,11 @@
     }
 
     async function deleteUser(id) {
-      if (!confirm('Hapus member ini?')) return;
       const res = await apiPost({ action: 'deleteUser', adminPin: state.adminPin, id });
       if (res.status === 'success') {
         state.adminUsers = res.users;
         renderAdminDashboard();
+        showToast('Member berhasil dihapus');
       }
     }
 
