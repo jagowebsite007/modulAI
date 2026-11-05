@@ -1,234 +1,1154 @@
-function doGet(e) {
-  const action = (e && e.parameter && e.parameter.action) ? e.parameter.action : 'init';
-  if (action === 'init') {
-    return jsonResponse({
-      status: 'success',
-      modules: getSheetObjects('Modules'),
-      tools: getSheetObjects('Tools'),
-      showcase: getSheetObjects('Showcase'),
-      settings: getSettingsObject()
-    });
+/**
+ * ============================================================================
+ * FILE 2: kode.gs (GOOGLE APPS SCRIPT REST API BACKEND + AI PRODUCT STUDIO)
+ * File ini dipasang di Google Apps Script untuk melayani request dari
+ * aplikasi frontend index.html yang di-deploy di Vercel.
+ * ============================================================================
+ */
+
+// Opsional: Anda bisa mengisi API Key Google AI Studio (Gemini) langsung di sini
+// atau mengisinya melalui menu "Tes & Pengaturan Drive" di Dashboard Admin.
+const DEFAULT_GEMINI_API_KEY_ = '';
+
+const DEFAULT_ACCOUNTS_ = [
+  {
+    id_supplier: 'ADMIN-01',
+    username: 'admin',
+    password: 'admin123',
+    nama_supplier: 'Administrator Utama',
+    role: 'admin',
+    kontak_wa: '081200000001',
+    alamat: 'Kantor Pusat',
+    status_aktif: 'Aktif'
+  },
+  {
+    id_supplier: 'SUP-001',
+    username: 'supplier1',
+    password: '123456',
+    nama_supplier: 'PT Sumber Pangan Jaya',
+    role: 'supplier',
+    kontak_wa: '081234567890',
+    alamat: 'Jl. Industri Raya No. 12, Jakarta',
+    status_aktif: 'Aktif'
+  },
+  {
+    id_supplier: 'SUP-002',
+    username: 'supplier2',
+    password: '123456',
+    nama_supplier: 'CV Berkah Sembako Makmur',
+    role: 'supplier',
+    kontak_wa: '081987654321',
+    alamat: 'Jl. Niaga Timur No. 88, Surabaya',
+    status_aktif: 'Aktif'
   }
-  return jsonResponse({ status: 'error', message: 'Action tidak dikenal' });
+];
+
+/**
+ * Handler doGet(e) untuk mengecek status API Backend dari Vercel
+ */
+function doGet(e) {
+  if (e && e.parameter && e.parameter.action === 'ping') {
+    return ContentService.createTextOutput(
+      JSON.stringify({
+        success: true,
+        status: 'ONLINE',
+        message: 'Google Apps Script API Backend Aktif & Siap Melayani Vercel!'
+      })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  try {
+    return HtmlService.createHtmlOutputFromFile('index')
+      .setTitle('Pendataan Harga Mitra')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1.0');
+  } catch (noHtmlErr) {
+    return ContentService.createTextOutput(
+      JSON.stringify({
+        success: true,
+        status: 'API_ONLY_MODE',
+        message: 'Backend Google Apps Script (Database Spreadsheet, Google Drive & AI Product Studio) Aktif untuk Vercel Frontend.'
+      })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
+/**
+ * Handler Utama doPost(e) untuk Menerima Request API dari Vercel (CORS-Friendly)
+ */
 function doPost(e) {
   try {
+    if (!e || !e.postData || !e.postData.contents) {
+      throw new Error('Request body kosong.');
+    }
+
     const body = JSON.parse(e.postData.contents);
     const action = body.action;
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const args = body.args || [];
+    let result = null;
 
-    // 1. LOGIN PESERTA
-    if (action === 'login') {
-      const users = getSheetObjects('Users');
-      const user = users.find(u => 
-        String(u.Email).toLowerCase().trim() === String(body.email).toLowerCase().trim() && 
-        String(u.Password).trim() === String(body.password).trim()
-      );
-      if (!user) return jsonResponse({ status: 'error', message: 'Email atau password salah!' });
-      if (user.Status !== 'AKTIF') return jsonResponse({ status: 'error', message: 'Akun Anda sedang dinonaktifkan. Hubungi Admin.' });
-
-      delete user.Password;
-      return jsonResponse({
-        status: 'success',
-        user: user,
-        modules: getSheetObjects('Modules'),
-        tools: getSheetObjects('Tools'),
-        showcase: getSheetObjects('Showcase'),
-        settings: getSettingsObject()
-      });
+    switch (action) {
+      case 'loginUser':
+        result = loginUser(args[0], args[1]);
+        break;
+      case 'registerMitraAccount':
+        result = registerMitraAccount(args[0]);
+        break;
+      case 'getPortalData':
+        result = getPortalData(args[0]);
+        break;
+      case 'saveProductData':
+        result = saveProductData(args[0], args[1]);
+        break;
+      case 'deleteProductData':
+        result = deleteProductData(args[0], args[1]);
+        break;
+      case 'saveSupplierAccount':
+        result = saveSupplierAccount(args[0], args[1]);
+        break;
+      case 'saveDriveSyncConfig':
+        result = saveDriveSyncConfig(args[0], args[1]);
+        break;
+      case 'testAndInitDriveSync':
+        result = testAndInitDriveSync(args[0], args[1]);
+        break;
+      case 'getPhotoBase64ForDownload':
+        result = getPhotoBase64ForDownload(args[0], args[1]);
+        break;
+      case 'generateAiProductPhoto':
+        result = generateAiProductPhoto(args[0], args[1], args[2]);
+        break;
+      default:
+        throw new Error('Action API tidak dikenali: ' + action);
     }
 
-    // 2. SIMPAN PROGRES BELAJAR
-    if (action === 'toggleProgress') {
-      const sheet = ss.getSheetByName('Users');
-      const data = sheet.getDataRange().getValues();
-      for (let i = 1; i < data.length; i++) {
-        if (data[i][0] === body.userId) {
-          let prog = [];
-          try { prog = JSON.parse(data[i][6] || '[]'); } catch (err) { prog = []; }
-          const idx = prog.indexOf(body.moduleId);
-          if (idx > -1) {
-            prog.splice(idx, 1);
-          } else {
-            prog.push(body.moduleId);
-          }
-          const updatedJson = JSON.stringify(prog);
-          sheet.getRange(i + 1, 7).setValue(updatedJson);
-          return jsonResponse({ status: 'success', progress: prog });
-        }
-      }
-      return jsonResponse({ status: 'error', message: 'User tidak ditemukan' });
-    }
-
-    // 3. KIRIM KARYA SHOWCASE DARI PESERTA
-    if (action === 'submitShowcase') {
-      const sheet = ss.getSheetByName('Showcase');
-      const id = 'SHW-' + new Date().getTime().toString().slice(-5);
-      sheet.appendRow([id, body.namaUser, body.judulKarya, body.kategori, body.linkKarya, new Date().toISOString()]);
-      return jsonResponse({ status: 'success', showcase: getSheetObjects('Showcase') });
-    }
-
-    // 4. VERIFIKASI PIN ADMIN UNTUK SELURUH AKSI ADMIN DI BAWAH INI
-    const settings = getSettingsObject();
-    if (String(body.adminPin).trim() !== String(settings.ADMIN_PIN).trim()) {
-      return jsonResponse({ status: 'error', message: 'PIN Admin tidak valid!' });
-    }
-
-    if (action === 'adminGetData') {
-      return jsonResponse({
-        status: 'success',
-        users: getSheetObjects('Users'),
-        modules: getSheetObjects('Modules'),
-        tools: getSheetObjects('Tools'),
-        showcase: getSheetObjects('Showcase'),
-        settings: settings
-      });
-    }
-
-    // 5. CRUD MODUL RUANG BELAJAR (8 Kolom: Tanpa Code Vault & Tanpa Lampiran)
-    if (action === 'saveModule') {
-      const sheet = ss.getSheetByName('Modules');
-      const data = sheet.getDataRange().getValues();
-      const m = body.moduleData;
-      if (m.ID) {
-        for (let i = 1; i < data.length; i++) {
-          if (String(data[i][0]) === String(m.ID)) {
-            sheet.getRange(i + 1, 1, 1, 8).setValues([[m.ID, m.Kategori, Number(m.Urutan || 1), m.Judul, m.TipeAkses, m.VideoURL, m.Ringkasan, m.PromptText]]);
-            return jsonResponse({ status: 'success', modules: getSheetObjects('Modules') });
-          }
-        }
-      }
-      const newId = 'MOD-' + new Date().getTime().toString().slice(-5);
-      sheet.appendRow([newId, m.Kategori, Number(m.Urutan || 1), m.Judul, m.TipeAkses, m.VideoURL, m.Ringkasan, m.PromptText]);
-      return jsonResponse({ status: 'success', modules: getSheetObjects('Modules') });
-    }
-
-    if (action === 'deleteModule') {
-      deleteRowById(ss.getSheetByName('Modules'), body.id);
-      return jsonResponse({ status: 'success', modules: getSheetObjects('Modules') });
-    }
-
-    // 6. CRUD DIREKTORI AI TOOLS
-    if (action === 'saveTool') {
-      const sheet = ss.getSheetByName('Tools');
-      const data = sheet.getDataRange().getValues();
-      const t = body.toolData;
-      if (t.ID) {
-        for (let i = 1; i < data.length; i++) {
-          if (String(data[i][0]) === String(t.ID)) {
-            sheet.getRange(i + 1, 1, 1, 6).setValues([[t.ID, t.NamaTool, t.Kategori, t.StatusHarga, t.Deskripsi, t.LinkURL]]);
-            return jsonResponse({ status: 'success', tools: getSheetObjects('Tools') });
-          }
-        }
-      }
-      const newId = 'TL-' + new Date().getTime().toString().slice(-5);
-      sheet.appendRow([newId, t.NamaTool, t.Kategori, t.StatusHarga, t.Deskripsi, t.LinkURL]);
-      return jsonResponse({ status: 'success', tools: getSheetObjects('Tools') });
-    }
-
-    if (action === 'deleteTool') {
-      deleteRowById(ss.getSheetByName('Tools'), body.id);
-      return jsonResponse({ status: 'success', tools: getSheetObjects('Tools') });
-    }
-
-    // 7. CRUD SHOWCASE KARYA (ADMIN BISA TAMBAH, EDIT & HAPUS)
-    if (action === 'saveShowcase') {
-      const sheet = ss.getSheetByName('Showcase');
-      const data = sheet.getDataRange().getValues();
-      const s = body.showcaseData;
-      if (s.ID) {
-        for (let i = 1; i < data.length; i++) {
-          if (String(data[i][0]) === String(s.ID)) {
-            sheet.getRange(i + 1, 1, 1, 5).setValues([[s.ID, s.NamaUser, s.JudulKarya, s.Kategori, s.LinkKarya]]);
-            return jsonResponse({ status: 'success', showcase: getSheetObjects('Showcase') });
-          }
-        }
-      }
-      const newId = 'SHW-' + new Date().getTime().toString().slice(-5);
-      sheet.appendRow([newId, s.NamaUser, s.JudulKarya, s.Kategori, s.LinkKarya, new Date().toISOString()]);
-      return jsonResponse({ status: 'success', showcase: getSheetObjects('Showcase') });
-    }
-
-    if (action === 'deleteShowcase') {
-      deleteRowById(ss.getSheetByName('Showcase'), body.id);
-      return jsonResponse({ status: 'success', showcase: getSheetObjects('Showcase') });
-    }
-
-    // 8. CRUD MEMBER (BASIC / VIP)
-    if (action === 'saveUser') {
-      const sheet = ss.getSheetByName('Users');
-      const data = sheet.getDataRange().getValues();
-      const u = body.userData;
-      if (u.ID) {
-        for (let i = 1; i < data.length; i++) {
-          if (String(data[i][0]) === String(u.ID)) {
-            const pass = u.Password ? u.Password : data[i][3];
-            sheet.getRange(i + 1, 1, 1, 6).setValues([[u.ID, u.Nama, u.Email, pass, u.Paket, u.Status]]);
-            return jsonResponse({ status: 'success', users: getSheetObjects('Users') });
-          }
-        }
-      }
-      const newId = 'USR-' + new Date().getTime().toString().slice(-5);
-      sheet.appendRow([newId, u.Nama, u.Email, u.Password || '123456', u.Paket, u.Status || 'AKTIF', '[]', new Date().toISOString()]);
-      return jsonResponse({ status: 'success', users: getSheetObjects('Users') });
-    }
-
-    if (action === 'deleteUser') {
-      deleteRowById(ss.getSheetByName('Users'), body.id);
-      return jsonResponse({ status: 'success', users: getSheetObjects('Users') });
-    }
-
-    // 9. SIMPAN SEMUA PENGATURAN MENU, SERTIFIKAT & SISTEM
-    if (action === 'saveSettings') {
-      const sheet = ss.getSheetByName('Settings');
-      const current = getSettingsObject();
-      const incoming = body.settingsData || {};
-      const merged = Object.assign({}, current, incoming);
-
-      sheet.clearContents();
-      sheet.appendRow(['Key', 'Value']);
-      Object.keys(merged).forEach(k => sheet.appendRow([k, merged[k]]));
-      return jsonResponse({ status: 'success', settings: getSettingsObject() });
-    }
-
-    return jsonResponse({ status: 'error', message: 'Perintah tidak dikenali' });
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
-    return jsonResponse({ status: 'error', message: err.toString() });
+    return ContentService.createTextOutput(
+      JSON.stringify({
+        success: false,
+        message: 'Error Server Apps Script: ' + err.message
+      })
+    ).setMimeType(ContentService.MimeType.JSON);
   }
 }
 
-function getSheetObjects(sheetName) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
-  if (!sheet) return [];
-  const rows = sheet.getDataRange().getValues();
-  if (rows.length < 2) return [];
-  const headers = rows[0];
-  return rows.slice(1).map(r => {
-    let obj = {};
-    headers.forEach((h, i) => obj[h] = r[i]);
-    return obj;
-  });
+/**
+ * Memastikan Sheet "Suppliers" dan "Products" selalu siap
+ */
+function ensureDatabaseReady_() {
+  if (typeof setupSheetsOnly_ === 'function') {
+    return setupSheetsOnly_();
+  }
+  throw new Error('Fungsi setupSheetsOnly_ tidak ditemukan. Pastikan file setup.gs sudah dibuat di Google Apps Script.');
 }
 
-function getSettingsObject() {
-  const arr = getSheetObjects('Settings');
-  let obj = {};
-  arr.forEach(item => obj[item.Key] = item.Value);
-  return obj;
+/**
+ * Mengonversi berbagai format link Google Drive / ID menjadi
+ * link anti-blokir: https://lh3.googleusercontent.com/d/FILE_ID
+ */
+function convertDriveToLh3Url(inputUrlOrId) {
+  if (!inputUrlOrId) return '';
+  const raw = String(inputUrlOrId).trim();
+  const fileId = extractDriveFileId_(raw);
+  if (fileId) {
+    return 'https://lh3.googleusercontent.com/d/' + fileId;
+  }
+  return raw;
 }
 
-function deleteRowById(sheet, id) {
-  const data = sheet.getDataRange().getValues();
+function extractDriveFileId_(inputUrlOrId) {
+  if (!inputUrlOrId) return '';
+  const raw = String(inputUrlOrId).trim();
+  const patterns = [
+    /lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]{10,})/,
+    /\/file\/d\/([a-zA-Z0-9_-]{10,})/,
+    /[?&]id=([a-zA-Z0-9_-]{10,})/
+  ];
+  for (let i = 0; i < patterns.length; i++) {
+    const match = raw.match(patterns[i]);
+    if (match && match[1]) return match[1];
+  }
+  if (/^[a-zA-Z0-9_-]{20,60}$/.test(raw)) {
+    return raw;
+  }
+  return '';
+}
+
+function formatCellDate_(val) {
+  if (!val) return '';
+  if (Object.prototype.toString.call(val) === '[object Date]') {
+    try {
+      return Utilities.formatDate(val, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+    } catch (e) {
+      return String(val);
+    }
+  }
+  return String(val);
+}
+
+/**
+ * Membuat nama file foto otomatis yang sinkron dengan data produk
+ * Format: [SKU]_[Nama_Produk]_Modal-[HargaMitra]_Jual-[HargaJual]_Stok-[TotalStok].jpg
+ */
+function buildSmartFileName_(payload) {
+  const cleanSku = String(payload.kode_sku || 'SKU')
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]/g, '');
+  const cleanName = String(payload.nama_produk || 'Produk')
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]/g, '_')
+    .replace(/_+/g, '_')
+    .substring(0, 35);
+  const modal = Number(payload.harga_supplier || 0);
+  const jual = Number(payload.harga_jual_supplier || 0);
+  const stok = Number(payload.total_stok !== undefined ? payload.total_stok : 0);
+
+  return cleanSku + '_' + cleanName + '_Modal-' + modal + '_Jual-' + jual + '_Stok-' + stok + '.jpg';
+}
+
+/**
+ * Memindahkan file foto lama di Google Drive ke Sampah (Trash) secara otomatis
+ */
+function trashOldDriveFile_(fileIdOrUrl) {
+  const fileId = extractDriveFileId_(fileIdOrUrl);
+  if (!fileId) return false;
+  try {
+    const oldFile = DriveApp.getFileById(fileId);
+    oldFile.setTrashed(true);
+    return true;
+  } catch (e) {
+    Logger.log('Info trashOldDriveFile_: ' + e.message);
+    return false;
+  }
+}
+
+/**
+ * Mengubah nama file foto yang sudah ada di Google Drive secara otomatis
+ */
+function renameDriveFileIfPossible_(fileIdOrUrl, newSmartFileName) {
+  const fileId = extractDriveFileId_(fileIdOrUrl);
+  if (!fileId || !newSmartFileName) return false;
+  try {
+    const existingFile = DriveApp.getFileById(fileId);
+    if (existingFile.getName() !== newSmartFileName) {
+      existingFile.setName(newSmartFileName);
+    }
+    return true;
+  } catch (e) {
+    Logger.log('Info renameDriveFileIfPossible_: ' + e.message);
+    return false;
+  }
+}
+
+/**
+ * ============================================================================
+ * MODE 2: AI FULL GENERATE (GOOGLE FLOW STUDIO PROMPT MULTI-ENGINE)
+ * Meng-generate foto produk studio komersial menggunakan prompt wajib:
+ * "Premium product photography, clean studio lighting, realistic shadows,
+ *  sharp product details, elegant background, commercial advertising quality."
+ * ============================================================================
+ */
+function generateAiProductPhoto(rawBase64Data, customPrompt, productNameHint) {
+  try {
+    const basePrompt =
+      customPrompt ||
+      'Premium product photography, clean studio lighting, realistic shadows, sharp product details, elegant background, commercial advertising quality.';
+
+    const cleanBase64 = rawBase64Data ? rawBase64Data.replace(/^data:image\/\w+;base64,/, '') : '';
+    const scriptProps = PropertiesService.getScriptProperties();
+    const apiKey = (scriptProps.getProperty('GEMINI_API_KEY') || DEFAULT_GEMINI_API_KEY_ || '').trim();
+
+    let detailedVisualSubject = productNameHint
+      ? ('Commercial product package of ' + productNameHint)
+      : 'Commercial retail grocery product package';
+
+    if (apiKey && cleanBase64) {
+      const geminiModels = [
+        'gemini-2.0-flash-exp-image-generation',
+        'gemini-2.5-flash-image'
+      ];
+
+      const fullInstruction =
+        'Transform this product photo into: ' + basePrompt +
+        (productNameHint ? (' Product name: ' + productNameHint + '.') : '') +
+        ' Preserve the exact product packaging, colors, and brand identity while placing it on a luxury commercial studio pedestal with soft studio lighting and realistic contact shadows.';
+
+      for (let m = 0; m < geminiModels.length; m++) {
+        try {
+          const endpoint =
+            'https://generativelanguage.googleapis.com/v1beta/models/' +
+            geminiModels[m] +
+            ':generateContent?key=' +
+            encodeURIComponent(apiKey);
+
+          const response = UrlFetchApp.fetch(endpoint, {
+            method: 'post',
+            contentType: 'application/json',
+            payload: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    { text: fullInstruction },
+                    {
+                      inline_data: {
+                        mime_type: 'image/jpeg',
+                        data: cleanBase64
+                      }
+                    }
+                  ]
+                }
+              ],
+              generationConfig: {
+                responseModalities: ['TEXT', 'IMAGE']
+              }
+            }),
+            muteHttpExceptions: true
+          });
+
+          if (response.getResponseCode() >= 200 && response.getResponseCode() < 300) {
+            const json = JSON.parse(response.getContentText());
+            const candidates = json.candidates || [];
+            for (let i = 0; i < candidates.length; i++) {
+              const parts = (candidates[i].content && candidates[i].content.parts) || [];
+              for (let j = 0; j < parts.length; j++) {
+                const inlineData = parts[j].inlineData || parts[j].inline_data;
+                if (inlineData && inlineData.data) {
+                  const outMime = inlineData.mimeType || inlineData.mime_type || 'image/jpeg';
+                  return {
+                    success: true,
+                    engine: geminiModels[m],
+                    aiBase64Image: 'data:' + outMime + ';base64,' + inlineData.data
+                  };
+                }
+              }
+            }
+          }
+        } catch (modelErr) {
+          Logger.log('Info Gemini Image model ' + geminiModels[m] + ': ' + modelErr.message);
+        }
+      }
+
+      try {
+        const visionEndpoint =
+          'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' +
+          encodeURIComponent(apiKey);
+        const visionPrompt =
+          'Describe the main product in this photo in 25 English words for a commercial product photographer: include exact packaging type (bottle, pouch, sack, box, can), dominant colors, material texture, and brand/label style. Do not describe the messy background.' +
+          (productNameHint ? (' Product name hint: ' + productNameHint + '.') : '');
+
+        const visionRes = UrlFetchApp.fetch(visionEndpoint, {
+          method: 'post',
+          contentType: 'application/json',
+          payload: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: visionPrompt },
+                  {
+                    inline_data: {
+                      mime_type: 'image/jpeg',
+                      data: cleanBase64
+                    }
+                  }
+                ]
+              }
+            ]
+          }),
+          muteHttpExceptions: true
+        });
+
+        if (visionRes.getResponseCode() >= 200 && visionRes.getResponseCode() < 300) {
+          const vJson = JSON.parse(visionRes.getContentText());
+          const vText =
+            vJson.candidates &&
+            vJson.candidates[0] &&
+            vJson.candidates[0].content &&
+            vJson.candidates[0].content.parts &&
+            vJson.candidates[0].content.parts[0] &&
+            vJson.candidates[0].content.parts[0].text;
+          if (vText && vText.trim().length > 5) {
+            detailedVisualSubject = vText.trim().replace(/\n+/g, ' ');
+          }
+        }
+      } catch (visionErr) {
+        Logger.log('Info Gemini Vision analyzer: ' + visionErr.message);
+      }
+    }
+
+    const finalFluxPrompt =
+      detailedVisualSubject +
+      ', ' +
+      basePrompt +
+      ', centered on a sleek minimalist studio podium, 85mm commercial macro lens, ultra-detailed 8k resolution';
+
+    const randomSeed = Math.floor(10000 + Math.random() * 89999);
+    const fluxUrl =
+      'https://image.pollinations.ai/prompt/' +
+      encodeURIComponent(finalFluxPrompt) +
+      '?width=768&height=768&seed=' +
+      randomSeed +
+      '&nologo=true&model=flux';
+
+    const imgResponse = UrlFetchApp.fetch(fluxUrl, {
+      method: 'get',
+      muteHttpExceptions: true,
+      followRedirects: true
+    });
+
+    if (imgResponse.getResponseCode() >= 200 && imgResponse.getResponseCode() < 300) {
+      const imgBlob = imgResponse.getBlob();
+      const outBase64 = Utilities.base64Encode(imgBlob.getBytes());
+      return {
+        success: true,
+        engine: 'Google Flow Studio Prompt (Flux Commercial Engine)',
+        visualSubject: detailedVisualSubject,
+        aiBase64Image: 'data:image/jpeg;base64,' + outBase64
+      };
+    }
+
+    return {
+      success: false,
+      message: 'Server AI Image Generator sedang sibuk (HTTP ' + imgResponse.getResponseCode() + ').'
+    };
+  } catch (err) {
+    return {
+      success: false,
+      message: 'Gagal memproses AI Full Generate: ' + err.message
+    };
+  }
+}
+
+/**
+ * 1. Fungsi Login Multi-User (Mitra & Admin)
+ */
+function loginUser(username, password) {
+  const cleanUser = String(username || '').trim().toLowerCase().replace(/\s+/g, '');
+  const cleanPass = String(password || '').trim();
+
+  try {
+    const db = ensureDatabaseReady_();
+    const sheet = db.sheetSuppliers;
+    const data = sheet.getDataRange().getValues();
+
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const dbUser = String(row[1] || '').trim().toLowerCase().replace(/\s+/g, '');
+      const dbPass = String(row[2] || '').trim();
+      const statusAktif = String(row[7] || 'Aktif').trim();
+
+      if (dbUser === cleanUser && dbPass === cleanPass) {
+        if (statusAktif.toLowerCase() !== 'aktif') {
+          return {
+            success: false,
+            message: 'Akun Mitra Anda sedang dinonaktifkan oleh Admin.'
+          };
+        }
+
+        return {
+          success: true,
+          user: {
+            id_supplier: String(row[0] || ''),
+            username: String(row[1] || ''),
+            nama_supplier: String(row[3] || ''),
+            role: String(row[4] || 'supplier').toLowerCase(),
+            kontak_wa: String(row[5] || ''),
+            alamat: String(row[6] || ''),
+            folder_drive_url: String(row[9] || '')
+          }
+        };
+      }
+    }
+  } catch (err) {
+    Logger.log('Info fallback loginUser: ' + err.message);
+  }
+
+  for (let j = 0; j < DEFAULT_ACCOUNTS_.length; j++) {
+    const acc = DEFAULT_ACCOUNTS_[j];
+    if (acc.username.toLowerCase() === cleanUser && acc.password === cleanPass) {
+      return {
+        success: true,
+        user: {
+          id_supplier: acc.id_supplier,
+          username: acc.username,
+          nama_supplier: acc.nama_supplier,
+          role: acc.role,
+          kontak_wa: acc.kontak_wa,
+          alamat: acc.alamat,
+          folder_drive_url: ''
+        }
+      };
+    }
+  }
+
+  return {
+    success: false,
+    message: 'Username atau password tidak sesuai.'
+  };
+}
+
+/**
+ * 1B. Fungsi Pendaftaran Mandiri Mitra Baru (Daftar Jadi Mitra)
+ * Semua kolom wajib diisi: Nama Toko, Username, Password, No WhatsApp, Alamat Lengkap
+ */
+function registerMitraAccount(regPayload) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+
+  try {
+    if (!regPayload) {
+      throw new Error('Data pendaftaran tidak lengkap.');
+    }
+
+    const namaToko = String(regPayload.nama_supplier || '').trim();
+    const username = String(regPayload.username || '').trim().replace(/\s+/g, '');
+    const password = String(regPayload.password || '').trim();
+    const kontakWa = String(regPayload.kontak_wa || '').trim();
+    const alamat = String(regPayload.alamat || '').trim();
+
+    if (!namaToko || !username || !password || !kontakWa || !alamat) {
+      return {
+        success: false,
+        message: 'Semua kolom (Nama Toko, User Login, Password, No. WhatsApp, dan Alamat Lengkap) wajib diisi!'
+      };
+    }
+
+    const db = ensureDatabaseReady_();
+    const sheet = db.sheetSuppliers;
+    const data = sheet.getDataRange().getValues();
+    const cleanUserLower = username.toLowerCase();
+
+    for (let i = 1; i < data.length; i++) {
+      const existingUser = String(data[i][1] || '').trim().toLowerCase().replace(/\s+/g, '');
+      if (existingUser === cleanUserLower) {
+        return {
+          success: false,
+          message: 'User Login "' + username + '" sudah terdaftar. Silakan gunakan User Login lain.'
+        };
+      }
+    }
+
+    const now = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+    const newMitraId = 'MTR-' + String(Math.floor(100 + Math.random() * 900));
+    let newFolderUrl = '';
+
+    if (typeof getOrCreateSupplierSubFolder_ === 'function') {
+      try {
+        const subFolder = getOrCreateSupplierSubFolder_(newMitraId, namaToko);
+        newFolderUrl = subFolder.getUrl();
+      } catch (e) {
+        Logger.log('Info buat sub-folder Mitra baru: ' + e.message);
+      }
+    }
+
+    const newRow = [
+      newMitraId,
+      username,
+      password,
+      namaToko,
+      'supplier',
+      kontakWa,
+      alamat,
+      'Aktif',
+      now,
+      newFolderUrl
+    ];
+
+    sheet.appendRow(newRow);
+
+    return {
+      success: true,
+      message: 'Pendaftaran Mitra "' + namaToko + '" berhasil! Anda kini dapat langsung masuk.',
+      user: {
+        id_supplier: newMitraId,
+        username: username,
+        nama_supplier: namaToko,
+        role: 'supplier',
+        kontak_wa: kontakWa,
+        alamat: alamat,
+        folder_drive_url: newFolderUrl
+      }
+    };
+  } catch (err) {
+    return {
+      success: false,
+      message: 'Gagal mendaftarkan Mitra: ' + err.message
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * 2. Ambil Data Produk, Mitra & Info Sinkronisasi Google Drive
+ */
+function getPortalData(sessionUser) {
+  try {
+    if (!sessionUser || !sessionUser.id_supplier) {
+      throw new Error('Sesi login tidak valid.');
+    }
+
+    const db = ensureDatabaseReady_();
+    const sheetProducts = db.sheetProducts;
+    const sheetSuppliers = db.sheetSuppliers;
+    const scriptProps = PropertiesService.getScriptProperties();
+
+    const isAdmin = String(sessionUser.role || '').toLowerCase() === 'admin';
+    const prodValues = sheetProducts.getDataRange().getValues();
+    const products = [];
+
+    for (let i = 1; i < prodValues.length; i++) {
+      const r = prodValues[i];
+      if (!r[0]) continue;
+
+      const rowSupplierId = String(r[1] || '');
+      if (!isAdmin && rowSupplierId !== String(sessionUser.id_supplier)) {
+        continue;
+      }
+
+      const normalizedPhoto = convertDriveToLh3Url(r[12]);
+      const extractedFileId = extractDriveFileId_(r[13]) || extractDriveFileId_(r[12]);
+      const directDownloadUrl = extractedFileId
+        ? ('https://drive.google.com/uc?export=download&id=' + extractedFileId)
+        : normalizedPhoto;
+
+      const parsedStock = isNaN(Number(r[11])) ? 0 : Number(r[11]);
+
+      products.push({
+        id_produk: String(r[0] || ''),
+        id_supplier: rowSupplierId,
+        nama_supplier: String(r[2] || ''),
+        kode_sku: String(r[3] || ''),
+        nama_produk: String(r[4] || ''),
+        kategori: String(r[5] || 'Umum'),
+        satuan: String(r[6] || 'Pcs'),
+        harga_supplier: Number(r[7] || 0),
+        harga_jual_supplier: Number(r[8] || 0),
+        harga_supplier_lama: Number(r[9] || 0),
+        harga_jual_lama: Number(r[10] || 0),
+        total_stok: parsedStock,
+        foto_url: normalizedPhoto,
+        drive_file_id: extractedFileId,
+        download_url: directDownloadUrl,
+        catatan: String(r[14] || ''),
+        updated_at: formatCellDate_(r[15])
+      });
+    }
+
+    const suppliers = [];
+    let currentSupplierFolderUrl = '';
+    const supValues = sheetSuppliers.getDataRange().getValues();
+
+    for (let j = 1; j < supValues.length; j++) {
+      const s = supValues[j];
+      if (!s[0]) continue;
+      const supId = String(s[0] || '');
+      const supFolderUrl = String(s[9] || '');
+
+      if (supId === String(sessionUser.id_supplier)) {
+        currentSupplierFolderUrl = supFolderUrl;
+      }
+
+      if (isAdmin) {
+        suppliers.push({
+          id_supplier: supId,
+          username: String(s[1] || ''),
+          password: String(s[2] || ''),
+          nama_supplier: String(s[3] || ''),
+          role: String(s[4] || 'supplier'),
+          kontak_wa: String(s[5] || ''),
+          alamat: String(s[6] || ''),
+          status_aktif: String(s[7] || 'Aktif'),
+          created_at: formatCellDate_(s[8]),
+          folder_drive_url: supFolderUrl
+        });
+      }
+    }
+
+    let savedDriveFolderId = scriptProps.getProperty('DRIVE_FOLDER_ID') || '';
+    if (!savedDriveFolderId && typeof CUSTOM_DRIVE_FOLDER_ID_OR_URL !== 'undefined' && CUSTOM_DRIVE_FOLDER_ID_OR_URL) {
+      savedDriveFolderId = extractGoogleId_(CUSTOM_DRIVE_FOLDER_ID_OR_URL);
+    }
+    const savedSpreadsheetId = db.ss ? db.ss.getId() : (scriptProps.getProperty('SPREADSHEET_ID') || '');
+    const hasGeminiKey = Boolean(scriptProps.getProperty('GEMINI_API_KEY') || DEFAULT_GEMINI_API_KEY_);
+
+    return {
+      success: true,
+      products: products.reverse(),
+      suppliers: suppliers,
+      syncInfo: {
+        spreadsheetId: savedSpreadsheetId,
+        spreadsheetUrl: db.ss ? db.ss.getUrl() : '',
+        mainDriveFolderId: savedDriveFolderId,
+        mainDriveFolderUrl: savedDriveFolderId ? ('https://drive.google.com/drive/folders/' + savedDriveFolderId) : '',
+        supplierFolderUrl: currentSupplierFolderUrl,
+        hasGeminiKey: hasGeminiKey
+      }
+    };
+  } catch (err) {
+    return {
+      success: false,
+      message: 'Gagal memuat data: ' + err.message
+    };
+  }
+}
+
+/**
+ * 3. Upload File Base64 ke Sub-Folder Google Drive milik Mitra terkait
+ */
+function uploadImageToSupplierDrive_(base64Data, fileName, mimeType, idSupplier, namaSupplier) {
+  let targetFolder = null;
+
+  try {
+    if (typeof getOrCreateSupplierSubFolder_ === 'function') {
+      targetFolder = getOrCreateSupplierSubFolder_(idSupplier, namaSupplier);
+    } else if (typeof getOrCreateMainDriveFolder_ === 'function') {
+      targetFolder = getOrCreateMainDriveFolder_();
+    } else {
+      targetFolder = DriveApp.getRootFolder();
+    }
+  } catch (driveAuthErr) {
+    throw new Error(
+      'Gagal mengakses Folder Google Drive (' + driveAuthErr.message + '). ' +
+      'Pastikan Anda sudah memilih fungsi "setupDatabase" di editor Google Apps Script lalu klik tombol "Run" untuk memberikan izin (Allow) akses Google Drive.'
+    );
+  }
+
+  const cleanBase64 = base64Data.replace(/^data:image\/\w+;base64,/, '');
+  const decodedBytes = Utilities.base64Decode(cleanBase64);
+  const blob = Utilities.newBlob(
+    decodedBytes,
+    mimeType || 'image/jpeg',
+    fileName || ('produk_' + Date.now() + '.jpg')
+  );
+
+  const file = targetFolder.createFile(blob);
+  try {
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  } catch (e) {
+    Logger.log('Info sharing file: ' + e.message);
+  }
+
+  const fileId = file.getId();
+  const lh3Url = 'https://lh3.googleusercontent.com/d/' + fileId;
+  const downloadUrl = 'https://drive.google.com/uc?export=download&id=' + fileId;
+
+  try {
+    updateSupplierFolderUrlInSheet_(idSupplier, targetFolder.getUrl());
+  } catch (e) {}
+
+  return {
+    fileId: fileId,
+    lh3Url: lh3Url,
+    downloadUrl: downloadUrl,
+    folderUrl: targetFolder.getUrl()
+  };
+}
+
+function updateSupplierFolderUrlInSheet_(idSupplier, folderUrl) {
+  if (!idSupplier || !folderUrl) return;
+  const db = ensureDatabaseReady_();
+  const sheetSup = db.sheetSuppliers;
+  const data = sheetSup.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(id)) {
-      sheet.deleteRow(i + 1);
+    if (String(data[i][0]) === String(idSupplier)) {
+      if (String(data[i][9] || '') !== String(folderUrl)) {
+        sheetSup.getRange(i + 1, 10).setValue(folderUrl);
+      }
       break;
     }
   }
 }
 
-function jsonResponse(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON);
+/**
+ * 4. Ambil Data Base64 Foto dari Google Drive agar Admin Bisa Download Langsung
+ */
+function getPhotoBase64ForDownload(fileIdOrUrl, customFileName) {
+  try {
+    const fileId = extractDriveFileId_(fileIdOrUrl);
+    if (!fileId) {
+      return {
+        success: false,
+        message: 'File ID Google Drive tidak ditemukan.'
+      };
+    }
+
+    const file = DriveApp.getFileById(fileId);
+    const blob = file.getBlob();
+    const mimeType = blob.getContentType() || 'image/jpeg';
+    const base64Str = Utilities.base64Encode(blob.getBytes());
+
+    return {
+      success: true,
+      fileName: customFileName || file.getName(),
+      base64Data: 'data:' + mimeType + ';base64,' + base64Str
+    };
+  } catch (err) {
+    return {
+      success: false,
+      message: 'Gagal mengunduh file dari Drive: ' + err.message
+    };
+  }
+}
+
+/**
+ * 5. Simpan / Update Produk & Sinkronisasi ke Sub-Folder Google Drive
+ */
+function saveProductData(payload, sessionUser) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+
+  try {
+    if (!sessionUser || !sessionUser.id_supplier) {
+      throw new Error('Akses ditolak. Silakan login kembali.');
+    }
+
+    const db = ensureDatabaseReady_();
+    const sheet = db.sheetProducts;
+    const data = sheet.getDataRange().getValues();
+    const isAdmin = String(sessionUser.role || '').toLowerCase() === 'admin';
+    const now = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+
+    const targetSupplierId = (isAdmin && payload.id_supplier) ? payload.id_supplier : sessionUser.id_supplier;
+    const targetSupplierName = (isAdmin && payload.nama_supplier) ? payload.nama_supplier : sessionUser.nama_supplier;
+
+    let fotoUrl = convertDriveToLh3Url(payload.foto_url || '');
+    let driveFileId = extractDriveFileId_(fotoUrl);
+    let driveDownloadCell = driveFileId
+      ? ('https://drive.google.com/uc?export=download&id=' + driveFileId)
+      : '';
+
+    const smartFileName = buildSmartFileName_(payload);
+    const hasNewUploadedPhoto = Boolean(payload.base64_image && payload.base64_image.length > 50);
+
+    if (hasNewUploadedPhoto) {
+      const uploaded = uploadImageToSupplierDrive_(
+        payload.base64_image,
+        smartFileName,
+        payload.mime_type || 'image/jpeg',
+        targetSupplierId,
+        targetSupplierName
+      );
+      fotoUrl = uploaded.lh3Url;
+      driveFileId = uploaded.fileId;
+      driveDownloadCell = uploaded.downloadUrl;
+    }
+
+    const hargaSupplierBaru = Number(payload.harga_supplier || 0);
+    const hargaJualBaru = Number(payload.harga_jual_supplier || 0);
+    const totalStokBaru = Number(payload.total_stok !== undefined ? payload.total_stok : 0);
+
+    if (payload.id_produk) {
+      for (let i = 1; i < data.length; i++) {
+        const row = data[i];
+        if (String(row[0]) === String(payload.id_produk)) {
+          if (!isAdmin && String(row[1]) !== String(sessionUser.id_supplier)) {
+            throw new Error('Anda tidak memiliki izin untuk mengubah produk milik Mitra lain.');
+          }
+
+          const oldPhotoUrlInSheet = String(row[12] || '');
+          const oldFileIdInSheet = extractDriveFileId_(row[13]) || extractDriveFileId_(oldPhotoUrlInSheet);
+
+          if (hasNewUploadedPhoto && oldFileIdInSheet && oldFileIdInSheet !== driveFileId) {
+            trashOldDriveFile_(oldFileIdInSheet);
+          }
+
+          if (!hasNewUploadedPhoto && oldFileIdInSheet) {
+            renameDriveFileIfPossible_(oldFileIdInSheet, smartFileName);
+          }
+
+          const hargaSupplierLamaSaatIni = Number(row[7] || 0);
+          const hargaJualLamaSaatIni = Number(row[8] || 0);
+
+          const historyHargaSupplier = (hargaSupplierBaru !== hargaSupplierLamaSaatIni)
+            ? hargaSupplierLamaSaatIni
+            : Number(row[9] || hargaSupplierLamaSaatIni);
+
+          const historyHargaJual = (hargaJualBaru !== hargaJualLamaSaatIni)
+            ? hargaJualLamaSaatIni
+            : Number(row[10] || hargaJualLamaSaatIni);
+
+          const finalFotoUrl = fotoUrl || oldPhotoUrlInSheet;
+          const finalDownloadUrl = driveDownloadCell || String(row[13] || '');
+
+          const updatedRow = [
+            String(row[0]),
+            String(row[1]),
+            String(row[2]),
+            String(payload.kode_sku || row[3] || ''),
+            String(payload.nama_produk || row[4]),
+            String(payload.kategori || row[5] || 'Umum'),
+            String(payload.satuan || row[6] || 'Pcs'),
+            hargaSupplierBaru,
+            hargaJualBaru,
+            historyHargaSupplier,
+            historyHargaJual,
+            totalStokBaru,
+            finalFotoUrl,
+            finalDownloadUrl,
+            String(payload.catatan !== undefined ? payload.catatan : row[14]),
+            now
+          ];
+
+          sheet.getRange(i + 1, 1, 1, updatedRow.length).setValues([updatedRow]);
+
+          return {
+            success: true,
+            message: 'Data produk & file di Sub-Folder Google Drive berhasil disinkronkan!',
+            foto_url: finalFotoUrl,
+            download_url: finalDownloadUrl
+          };
+        }
+      }
+      throw new Error('Produk tidak ditemukan di database.');
+    } else {
+      const newProductId = 'PRD-' + Date.now().toString().slice(-6);
+      let createdSubFolderUrl = '';
+      if (typeof getOrCreateSupplierSubFolder_ === 'function') {
+        const supFolder = getOrCreateSupplierSubFolder_(targetSupplierId, targetSupplierName);
+        createdSubFolderUrl = supFolder.getUrl();
+        updateSupplierFolderUrlInSheet_(targetSupplierId, createdSubFolderUrl);
+      }
+
+      if (!fotoUrl) {
+        const encodedText = encodeURIComponent((payload.nama_produk || 'Produk').substring(0, 14));
+        fotoUrl = 'https://placehold.co/200x200/0f766e/ffffff?text=' + encodedText;
+      }
+
+      const newRow = [
+        newProductId,
+        targetSupplierId,
+        targetSupplierName,
+        String(payload.kode_sku || ('SKU-' + newProductId.slice(-4))),
+        String(payload.nama_produk || 'Produk Baru'),
+        String(payload.kategori || 'Umum'),
+        String(payload.satuan || 'Pcs'),
+        hargaSupplierBaru,
+        hargaJualBaru,
+        hargaSupplierBaru,
+        hargaJualBaru,
+        totalStokBaru,
+        fotoUrl,
+        driveDownloadCell || fotoUrl,
+        String(payload.catatan || ''),
+        now
+      ];
+
+      sheet.appendRow(newRow);
+
+      return {
+        success: true,
+        message: 'Produk baru berhasil disimpan ke Spreadsheet & Sub-Folder Google Drive (' + targetSupplierId + ')!',
+        foto_url: fotoUrl,
+        download_url: driveDownloadCell || fotoUrl,
+        folder_url: createdSubFolderUrl
+      };
+    }
+  } catch (err) {
+    return {
+      success: false,
+      message: err.message
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * 6. Hapus Produk & Otomatis Pindahkan Foto di Google Drive ke Sampah (Auto-Clean)
+ */
+function deleteProductData(idProduk, sessionUser) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+
+  try {
+    const db = ensureDatabaseReady_();
+    const sheet = db.sheetProducts;
+    const data = sheet.getDataRange().getValues();
+    const isAdmin = String(sessionUser.role || '').toLowerCase() === 'admin';
+
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(idProduk)) {
+        if (!isAdmin && String(data[i][1]) !== String(sessionUser.id_supplier)) {
+          throw new Error('Akses ditolak: Anda hanya bisa menghapus produk milik Anda sendiri.');
+        }
+
+        const photoToTrash = String(data[i][13] || data[i][12] || '');
+        trashOldDriveFile_(photoToTrash);
+
+        sheet.deleteRow(i + 1);
+        return {
+          success: true,
+          message: 'Produk & file foto di Google Drive berhasil dihapus.'
+        };
+      }
+    }
+    return {
+      success: false,
+      message: 'Produk tidak ditemukan.'
+    };
+  } catch (err) {
+    return {
+      success: false,
+      message: err.message
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * 7. Kelola Akun Login Mitra & Otomatis Buat/Update Sub-Folder di Google Drive
+ */
+function saveSupplierAccount(supPayload, sessionUser) {
+  try {
+    if (!sessionUser || String(sessionUser.role || '').toLowerCase() !== 'admin') {
+      throw new Error('Hanya Admin yang dapat mengelola akun login Mitra.');
+    }
+
+    const db = ensureDatabaseReady_();
+    const sheet = db.sheetSuppliers;
+    const data = sheet.getDataRange().getValues();
+    const now = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+
+    if (supPayload.id_supplier) {
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][0]) === String(supPayload.id_supplier)) {
+          const supId = String(data[i][0]);
+          const supName = String(supPayload.nama_supplier || data[i][3]).trim();
+          const role = String(supPayload.role || data[i][4] || 'supplier');
+
+          let folderUrl = String(data[i][9] || '');
+          if (role.toLowerCase() !== 'admin' && typeof getOrCreateSupplierSubFolder_ === 'function') {
+            try {
+              const subFolder = getOrCreateSupplierSubFolder_(supId, supName);
+              folderUrl = subFolder.getUrl();
+            } catch (e) {}
+          }
+
+          const updated = [
+            supId,
+            String(supPayload.username || data[i][1]).trim(),
+            String(supPayload.password || data[i][2]).trim(),
+            supName,
+            role,
+            String(supPayload.kontak_wa || ''),
+            String(supPayload.alamat || ''),
+            String(supPayload.status_aktif || 'Aktif'),
+            formatCellDate_(data[i][8]) || now,
+            folderUrl
+          ];
+          sheet.getRange(i + 1, 1, 1, updated.length).setValues([updated]);
+          return {
+            success: true,
+            message: 'Akun Mitra & Sub-Folder Google Drive berhasil diperbarui.'
+          };
+        }
+      }
+    }
+
+    const cleanUsername = String(supPayload.username || '').trim().toLowerCase();
+    for (let j = 1; j < data.length; j++) {
+      if (String(data[j][1]).trim().toLowerCase() === cleanUsername) {
+        return {
+          success: false,
+          message: 'Username "' + supPayload.username + '" sudah digunakan. Pilih username lain.'
+        };
+      }
+    }
+
+    const newSupId = 'MTR-' + String(Math.floor(100 + Math.random() * 900));
+    const newSupName = String(supPayload.nama_supplier).trim();
+    let newFolderUrl = '';
+
+    if (typeof getOrCreateSupplierSubFolder_ === 'function') {
+      try {
+        const subFolder = getOrCreateSupplierSubFolder_(newSupId, newSupName);
+        newFolderUrl = subFolder.getUrl();
+      } catch (e) {}
+    }
+
+    const newRow = [
+      newSupId,
+      String(supPayload.username).trim(),
+      String(supPayload.password || '123456').trim(),
+      newSupName,
+      'supplier',
+      String(supPayload.kontak_wa || ''),
+      String(supPayload.alamat || ''),
+      String(supPayload.status_aktif || 'Aktif'),
+      now,
+      newFolderUrl
+    ];
+
+    sheet.appendRow(newRow);
+    return {
+      success: true,
+      message: 'Akun Mitra (' + newSupId + ') & Sub-Folder Google Drive berhasil dibuat!'
+    };
+  } catch (err) {
+    return {
+      success: false,
+      message: err.message
+    };
+  }
+}
+
+function saveDriveSyncConfig(configPayload, sessionUser) {
+  return testAndInitDriveSync(configPayload, sessionUser);
+}
+
+/**
+ * 8. Fungsi Diagnostik & Inisialisasi Langsung Folder Google Drive + Spreadsheet + Gemini API Key
+ */
+function testAndInitDriveSync(configPayload, sessionUser) {
+  try {
+    const scriptProps = PropertiesService.getScriptProperties();
+
+    if (configPayload && configPayload.driveFolderInput) {
+      const extractedFolderId = extractGoogleId_(configPayload.driveFolderInput);
+      if (!extractedFolderId) {
+        throw new Error('Format ID atau Link Folder Google Drive tidak valid.');
+      }
+      const testFolder = DriveApp.getFolderById(extractedFolderId);
+      scriptProps.setProperty('DRIVE_FOLDER_ID', testFolder.getId());
+    }
+
+    if (configPayload && configPayload.spreadsheetInput) {
+      const extractedSheetId = extractGoogleId_(configPayload.spreadsheetInput);
+      if (!extractedSheetId) {
+        throw new Error('Format ID atau Link Google Spreadsheet tidak valid.');
+      }
+      const testSs = SpreadsheetApp.openById(extractedSheetId);
+      scriptProps.setProperty('SPREADSHEET_ID', testSs.getId());
+    }
+
+    if (configPayload && configPayload.geminiApiKey) {
+      scriptProps.setProperty('GEMINI_API_KEY', String(configPayload.geminiApiKey).trim());
+    }
+
+    const setupResult = setupDatabase();
+
+    return {
+      success: true,
+      message: 'BERHASIL! Google Drive, Spreadsheet & Konfigurasi AI Studio telah aktif dan seluruh Sub-Folder Mitra sudah dibuat.',
+      syncInfo: {
+        spreadsheetId: setupResult.spreadsheetId,
+        spreadsheetUrl: setupResult.spreadsheetUrl,
+        mainDriveFolderId: setupResult.mainDriveFolderId,
+        mainDriveFolderUrl: setupResult.mainDriveFolderUrl,
+        subFolderCount: setupResult.subFolderCount,
+        hasGeminiKey: Boolean(scriptProps.getProperty('GEMINI_API_KEY') || DEFAULT_GEMINI_API_KEY_)
+      }
+    };
+  } catch (err) {
+    return {
+      success: false,
+      message:
+        'Gagal mengakses Google Drive/Spreadsheet: ' +
+        err.message +
+        ' — SOLUSI: Buka editor Google Apps Script > pilih file setup.gs > pilih fungsi "setupDatabase" di bagian atas > klik tombol Run > klik Review Permissions & Allow (Izinkan).'
+    };
+  }
 }
