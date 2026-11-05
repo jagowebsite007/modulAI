@@ -277,9 +277,6 @@
           Security Gate • Admin Only
         </span>
         <h3 class="text-lg font-extrabold text-white">Akses Panel Admin</h3>
-        <p class="text-[11px] text-slate-400 leading-snug">
-          Masukkan kode PIN Otorisasi untuk membuka pusat kendali LMS.
-        </p>
       </div>
 
       <form onsubmit="submitAdminPinModal(event)" class="relative space-y-3">
@@ -562,8 +559,16 @@
       settings: {},
       activeModule: null,
       adminPin: '',
-      adminUsers: []
+      adminUsers: [],
+      currentMainView: 'belajar',
+      currentModTab: 'ringkasan',
+      isAdminOpen: false,
+      currentAdminTab: 'modules'
     };
+
+    function saveState() {
+      localStorage.setItem('lms_session', JSON.stringify(state));
+    }
 
     // --- FITUR 10x KLIK LOGO UNTUK BUKA ADMIN ---
     let logoClicks = 0;
@@ -653,7 +658,8 @@
           state.tools = res.tools || [];
           state.showcase = res.showcase || [];
           state.settings = res.settings || {};
-          localStorage.setItem('lms_session', JSON.stringify(state));
+          state.currentMainView = 'belajar';
+          saveState();
           initAppUI();
         }
       } catch (err) {
@@ -745,8 +751,12 @@
       renderShowcase();
       updateProgressUI();
 
-      const firstMod = state.modules[0];
-      if (firstMod) selectModule(firstMod.ID);
+      const savedModId = state.activeModule && state.activeModule.ID;
+      const targetMod = state.modules.find(m => m.ID === savedModId && canAccessModule(m)) || state.modules[0];
+      if (targetMod) selectModule(targetMod.ID);
+
+      switchMainView(state.currentMainView || 'belajar');
+      switchModTab(state.currentModTab || 'ringkasan');
     }
 
     // --- KURIKULUM & PEMBATASAN AKSES BASIC vs VIP ---
@@ -814,6 +824,7 @@
       }
 
       state.activeModule = mod;
+      saveState();
       renderCurriculum();
 
       document.getElementById('videoPlayer').src = formatVideoEmbed(mod.VideoURL);
@@ -898,6 +909,8 @@
 
     // --- SUB-TABS RUANG BELAJAR (Hanya Ringkasan & Prompt) ---
     function switchModTab(tab) {
+      state.currentModTab = tab;
+      saveState();
       ['ringkasan', 'prompt'].forEach(t => {
         document.getElementById('mpanel-' + t).classList.toggle('hidden', t !== tab);
         const btn = document.getElementById('mtab-' + t);
@@ -914,6 +927,8 @@
     }
 
     function switchMainView(view) {
+      state.currentMainView = view;
+      saveState();
       ['belajar', 'tools', 'showcase', 'sertifikat'].forEach(v => {
         document.getElementById('view-' + v).classList.toggle('hidden', v !== view);
         const navBtn = document.getElementById('nav-' + v);
@@ -1012,10 +1027,13 @@
         state.tools = res.tools || [];
         state.showcase = res.showcase || [];
         state.settings = res.settings || {};
+        state.isAdminOpen = true;
+        saveState();
 
         closeAdminPinModal();
         document.getElementById('adminModal').classList.remove('hidden');
         renderAdminDashboard();
+        switchAdminTab(state.currentAdminTab || 'modules');
         showToast('🔓 Berhasil masuk ke Panel Admin');
       } catch (e) {
         if (err) {
@@ -1030,9 +1048,16 @@
       }
     }
 
-    function closeAdminModal() { document.getElementById('adminModal').classList.add('hidden'); }
+    function closeAdminModal() {
+      state.isAdminOpen = false;
+      state.adminPin = '';
+      saveState();
+      document.getElementById('adminModal').classList.add('hidden');
+    }
 
     function switchAdminTab(tab) {
+      state.currentAdminTab = tab;
+      saveState();
       ['modules', 'tools', 'showcase', 'sertifikat', 'users'].forEach(t => {
         document.getElementById('adm-' + t).classList.toggle('hidden', t !== tab);
         const btn = document.getElementById('atab-' + t);
@@ -1321,6 +1346,7 @@
       const res = await apiPost({ action: 'saveUser', adminPin: state.adminPin, userData });
       if (res.status === 'success') {
         state.adminUsers = res.users;
+        saveState();
         e.target.reset();
         document.getElementById('admUserId').value = '';
         renderAdminDashboard();
@@ -1332,6 +1358,7 @@
       const res = await apiPost({ action: 'deleteUser', adminPin: state.adminPin, id });
       if (res.status === 'success') {
         state.adminUsers = res.users;
+        saveState();
         renderAdminDashboard();
         showToast('Member berhasil dihapus');
       }
@@ -1341,8 +1368,15 @@
       const saved = localStorage.getItem('lms_session');
       if (saved) {
         try {
-          state = JSON.parse(saved);
-          if (state.user) initAppUI();
+          state = Object.assign(state, JSON.parse(saved));
+          if (state.user) {
+            initAppUI();
+          }
+          if (state.isAdminOpen && state.adminPin) {
+            document.getElementById('adminModal').classList.remove('hidden');
+            renderAdminDashboard();
+            switchAdminTab(state.currentAdminTab || 'modules');
+          }
         } catch (e) {}
       }
     });
