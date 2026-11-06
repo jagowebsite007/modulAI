@@ -380,10 +380,9 @@
             <input type="hidden" id="admToolId" />
             <input type="text" id="admToolNama" required placeholder="Nama AI Tool (mis: Midjourney)" class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
             <input type="text" id="admToolKategori" required placeholder="Kategori (Produk AI / Video AI / Web)" class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
-            <select id="admToolHarga" class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800">
-              <option value="Gratis">Gratis</option>
-              <option value="Freemium">Freemium</option>
-              <option value="Berbayar">Berbayar</option>
+            <select id="admToolHarga" class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 font-bold">
+              <option value="Free">Free</option>
+              <option value="VIP">VIP 👑</option>
             </select>
             <input type="url" id="admToolLink" required placeholder="https://link-tool.com" class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800" />
             <textarea id="admToolDeskripsi" rows="2" required placeholder="Deskripsi singkat kegunaan tool..." class="sm:col-span-4 px-3 py-2 rounded-lg bg-slate-900 border border-slate-800"></textarea>
@@ -944,23 +943,43 @@
       });
     }
 
+    function canAccessTool(tool) {
+      if (state.user && state.user.Paket === 'VIP') return true;
+      return String(tool.StatusHarga).toUpperCase() !== 'VIP';
+    }
+
     function renderTools() {
       const grid = document.getElementById('toolsGrid');
-      grid.innerHTML = state.tools.map(t => `
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between space-y-4">
-          <div>
-            <div class="flex items-center justify-between text-[11px] mb-2">
-              <span class="font-bold text-indigo-400">${t.Kategori}</span>
-              <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300">${t.StatusHarga}</span>
+      grid.innerHTML = state.tools.map(t => {
+        const isVipTool = String(t.StatusHarga).toUpperCase() === 'VIP';
+        const unlocked = canAccessTool(t);
+        const badgeLabel = isVipTool ? '👑 VIP' : 'Free';
+        const badgeClass = isVipTool
+          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 font-extrabold'
+          : 'bg-slate-800 text-slate-300';
+
+        const actionBtn = unlocked
+          ? `<a href="${t.LinkURL}" target="_blank" class="block text-center py-2 rounded-xl bg-slate-800 hover:bg-indigo-600 text-xs font-bold transition">
+              Buka Website Tool ↗
+            </a>`
+          : `<button onclick="openUpgradeModal()" class="w-full text-center py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold transition">
+              🔒 Khusus Member VIP
+            </button>`;
+
+        return `
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between space-y-4">
+            <div>
+              <div class="flex items-center justify-between text-[11px] mb-2">
+                <span class="font-bold text-indigo-400">${t.Kategori}</span>
+                <span class="px-2 py-0.5 rounded ${badgeClass}">${badgeLabel}</span>
+              </div>
+              <h4 class="font-bold text-base text-white">${t.NamaTool}</h4>
+              <p class="text-xs text-slate-400 mt-1">${t.Deskripsi}</p>
             </div>
-            <h4 class="font-bold text-base text-white">${t.NamaTool}</h4>
-            <p class="text-xs text-slate-400 mt-1">${t.Deskripsi}</p>
+            ${actionBtn}
           </div>
-          <a href="${t.LinkURL}" target="_blank" class="block text-center py-2 rounded-xl bg-slate-800 hover:bg-indigo-600 text-xs font-bold transition">
-            Buka Website Tool ↗
-          </a>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
 
     function renderShowcase() {
@@ -1207,7 +1226,7 @@
       document.getElementById('admToolId').value = t.ID;
       document.getElementById('admToolNama').value = t.NamaTool;
       document.getElementById('admToolKategori').value = t.Kategori;
-      document.getElementById('admToolHarga').value = t.StatusHarga;
+      document.getElementById('admToolHarga').value = String(t.StatusHarga).toUpperCase() === 'VIP' ? 'VIP' : 'Free';
       document.getElementById('admToolLink').value = t.LinkURL;
       document.getElementById('admToolDeskripsi').value = t.Deskripsi;
     }
